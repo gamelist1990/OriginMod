@@ -77,11 +77,6 @@ LL_TYPE_INSTANCE_HOOK(
     std::vector<std::string> args;
     if (toks.size() > 1) args.assign(toks.begin() + 1, toks.end());
 
-    // backward-compatibility: '-origin foo' should still work
-    if (sub == "origin" && !args.empty()) {
-        sub = args[0];
-        args.erase(args.begin());
-    }
 
     auto reply = [mod](std::string const& s) {
         origin_mod::api::Player{*mod}.localSendMessage(s);
