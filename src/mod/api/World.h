@@ -91,11 +91,17 @@ public:
     void emitChatSend(ChatSendEvent& ev) { mBefore.chatSend.emit(ev); }
     void emitTick(TickEvent& ev) { mAfter.tick.emit(ev); }
 
+    // Public methods called by ChatHook
+    void onPlayerChat(const std::string& playerName, const std::string& message, origin_mod::OriginMod& mod);
+    void onReceiveChat(const std::string& message, origin_mod::OriginMod& mod);
+    void onTick();
+
 private:
     World() = default;
 
     BeforeEvents mBefore;
     AfterEvents  mAfter;
+    uint64_t     mCurrentTick{0};
 };
 
 } // namespace origin_mod::api

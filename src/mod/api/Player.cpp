@@ -1,4 +1,5 @@
 #include "mod/api/Player.h"
+#include "mod/api/World.h"
 
 #include "mod/OriginMod.h"
 #include "mod/util/DebugLogger.h"
@@ -14,6 +15,7 @@
 #include "mc/network/packet/TextPacketPayload.h"
 #include "mc/world/Minecraft.h"
 #include "mc/client/gui/GuiData.h"
+#include "mc/world/actor/ActorSwingSource.h"
 
 namespace origin_mod::api {
 
@@ -44,6 +46,94 @@ std::string Player::name() const {
     } catch (...) {
     }
     return n;
+}
+
+void Player::setSneaking(bool sneaking) {
+    auto ciOpt = ll::service::bedrock::getClientInstance();
+    if (!ciOpt) return;
+
+    auto* lp = ciOpt->getLocalPlayer();
+    if (!lp) return;
+
+    try {
+        lp->setSneaking(sneaking);
+    } catch (...) {
+        mMod.getSelf().getLogger().debug("Failed to set sneaking state");
+    }
+}
+
+void Player::setSprinting(bool sprinting) {
+    auto ciOpt = ll::service::bedrock::getClientInstance();
+    if (!ciOpt) return;
+
+    auto* lp = ciOpt->getLocalPlayer();
+    if (!lp) return;
+
+    try {
+        lp->setSprinting(sprinting);
+    } catch (...) {
+        mMod.getSelf().getLogger().debug("Failed to set sprinting state");
+    }
+}
+
+bool Player::isAutoJumpEnabled() const {
+    auto ciOpt = ll::service::bedrock::getClientInstance();
+    if (!ciOpt) return false;
+
+    auto* lp = ciOpt->getLocalPlayer();
+    if (!lp) return false;
+
+    try {
+        return lp->isAutoJumpEnabled();
+    } catch (...) {
+        mMod.getSelf().getLogger().debug("Failed to get auto jump state");
+        return false;
+    }
+}
+
+bool Player::swing() const {
+    auto ciOpt = ll::service::bedrock::getClientInstance();
+    if (!ciOpt) return false;
+
+    auto* lp = ciOpt->getLocalPlayer();
+    if (!lp) return false;
+
+    try {
+        // Interact swingを使用
+        return lp->swing(ActorSwingSource::Interact);
+    } catch (...) {
+        mMod.getSelf().getLogger().debug("Failed to swing");
+        return false;
+    }
+}
+
+void Player::playEmote(const std::string& emoteId) const {
+    auto ciOpt = ll::service::bedrock::getClientInstance();
+    if (!ciOpt) return;
+
+    auto* lp = ciOpt->getLocalPlayer();
+    if (!lp) return;
+
+    try {
+        lp->playEmote(emoteId, true); // true for chat message
+    } catch (...) {
+        mMod.getSelf().getLogger().debug("Failed to play emote: {}", emoteId);
+    }
+}
+
+bool Player::isTeacher() const {
+    auto ciOpt = ll::service::bedrock::getClientInstance();
+    if (!ciOpt) return false;
+
+    auto* lp = ciOpt->getLocalPlayer();
+    if (!lp) return false;
+
+    try {
+        return lp->isTeacher();
+    } catch (...) {
+        mMod.getSelf().getLogger().debug("Failed to get teacher state");
+        return false;
+    }
 }
 
 void Player::sendMessage(std::string_view msg) const {

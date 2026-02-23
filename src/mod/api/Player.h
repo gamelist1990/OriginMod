@@ -26,6 +26,18 @@ public:
     // Player name (best-effort). Returns empty if not in-game yet.
     [[nodiscard]] std::string name() const;
 
+    // Movement and positioning
+    void setSneaking(bool sneaking);
+    void setSprinting(bool sprinting);
+    [[nodiscard]] bool isAutoJumpEnabled() const;
+
+    // Player actions
+    bool swing() const;
+    void playEmote(const std::string& emoteId) const;
+
+    // Player state
+    [[nodiscard]] bool isTeacher() const;
+
     // Send message to server chat (other users may see it).
     void sendMessage(std::string_view msg) const;
 
