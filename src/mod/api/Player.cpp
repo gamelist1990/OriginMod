@@ -185,4 +185,36 @@ void Player::localSendMessage(std::string_view msg) const {
     logger.warn("localSendMessage failed, dropping message: {}", msg);
 }
 
+Player::Location Player::location() const {
+    auto ciOpt = ll::service::bedrock::getClientInstance();
+    if (!ciOpt) return Location();
+
+    auto* lp = ciOpt->getLocalPlayer();
+    if (!lp) return Location();
+
+    try {
+        auto pos = lp->getPosition();
+        return Location(pos.x, pos.y, pos.z);
+    } catch (...) {
+        mMod.getSelf().getLogger().debug("Failed to get player location");
+        return Location();
+    }
+}
+
+int Player::getHealth() const {
+    auto ciOpt = ll::service::bedrock::getClientInstance();
+    if (!ciOpt) return -1;
+
+    auto* lp = ciOpt->getLocalPlayer();
+    if (!lp) return -1;
+
+    try {
+        // Actor::getHealth() 
+        return lp->getHealth();
+    } catch (...) {
+        mMod.getSelf().getLogger().debug("Failed to get player health");
+        return -1;
+    }
+}
+
 } // namespace origin_mod::api

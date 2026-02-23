@@ -26,6 +26,16 @@ public:
     // Player name (best-effort). Returns empty if not in-game yet.
     [[nodiscard]] std::string name() const;
 
+    // Position and health utilities (ユーザー要求機能)
+    // LocationをVec3型として数値で返す
+    struct Location {
+        double x, y, z;
+        Location(double x = 0.0, double y = 0.0, double z = 0.0) : x(x), y(y), z(z) {}
+    };
+
+    [[nodiscard]] Location location() const;
+    [[nodiscard]] int getHealth() const;
+
     // Movement and positioning
     void setSneaking(bool sneaking);
     void setSprinting(bool sprinting);

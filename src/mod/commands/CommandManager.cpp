@@ -1,6 +1,8 @@
 #include "mod/commands/CommandManager.h"
 #include "mod/commands/help/HelpCommand.h"
 #include "mod/commands/toggle/ToggleCommand.h"
+#include "mod/commands/players/PlayersCommand.h"
+#include "mod/commands/test/TestCommand.h"
 #include "mod/OriginMod.h"
 #include "mod/api/Player.h"
 #include <algorithm>
@@ -77,6 +79,24 @@ void CommandManager::initialize() {
     toggleCmd.maxArgs = 3;
     toggleCmd.handler = toggle::executeToggle;
     registerCommand(toggleCmd);
+
+    // プレイヤーコマンドを登録
+    Command playersCmd;
+    playersCmd.name = "players";
+    playersCmd.description = "プレイヤー・エンティティ情報を表示します";
+    playersCmd.minArgs = 0;
+    playersCmd.maxArgs = 3;  // players location, players entities, players debug に対応
+    playersCmd.handler = players::executePlayers;
+    registerCommand(playersCmd);
+
+    // テストコマンドを登録
+    Command testCmd;
+    testCmd.name = "test";
+    testCmd.description = "テスト機能とイベントのデバッグ";
+    testCmd.minArgs = 0;
+    testCmd.maxArgs = 2;
+    testCmd.handler = test::executeTest;
+    registerCommand(testCmd);
 
     initialized_ = true;
 }

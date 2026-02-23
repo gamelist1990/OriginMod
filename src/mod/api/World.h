@@ -9,6 +9,8 @@
 #include <vector>
 
 #include "mod/api/Player.h"
+#include "mod/api/Entity.h"
+#include "mod/api/PlayerAttackEntityEvent.h"
 
 // LeviLamina includes for Player access
 #include "ll/api/service/Bedrock.h"
@@ -77,6 +79,16 @@ struct TickEvent {
     uint64_t tick{0};
 };
 
+struct PlayerAttackEntityEventData {
+    std::string attackerName;
+    std::string targetName;
+    std::string targetType;
+    double damage;
+    bool wasCritical;
+    double distance;
+    bool targetIsPlayer;
+};
+
 struct PacketReceiveEvent {
     std::string packetType;
     std::string message;
@@ -100,6 +112,7 @@ public:
 
     struct AfterEvents {
         EventSignal<TickEvent> tick;
+        EventSignal<PlayerAttackEntityEventData> playerAttack;
     };
 
     [[nodiscard]] BeforeEvents& beforeEvents() noexcept { return mBefore; }
@@ -109,6 +122,7 @@ public:
     void emitChatSend(ChatSendEvent& ev) { mBefore.chatSend.emit(ev); }
     void emitPacketReceive(PacketReceiveEvent& ev) { mBefore.packetReceive.emit(ev); }
     void emitTick(TickEvent& ev) { mAfter.tick.emit(ev); }
+    void emitPlayerAttack(PlayerAttackEntityEventData& ev) { mAfter.playerAttack.emit(ev); }
 
     // Public methods called by ChatHook
     void onPlayerChat(const std::string& playerName, const std::string& message, origin_mod::OriginMod& mod);
@@ -120,6 +134,11 @@ public:
     std::vector<std::string> getPlayerNames() const;
 
     // Player objects utility (ユーザー提案)
+    std::vector<origin_mod::api::Player> getPlayers(origin_mod::OriginMod& mod) const;
+
+    // Entity objects utility (全エンティティ取得)
+    std::vector<origin_mod::api::Entity> getEntities(origin_mod::OriginMod& mod) const;
+
     template<typename Func>
     void forEachPlayer(Func&& func) const {
         try {
