@@ -17,7 +17,7 @@ void executeTest(OriginMod& mod, const std::vector<std::string>& args) {
 
         if (listenerId == 0) {
             listenerId = world.afterEvents().playerAttack.subscribe(
-                [&player](origin_mod::api::PlayerAttackEntityEventData& event) {
+                [&player](origin_mod::api::PlayerAttackEventData& event) {
                     player.localSendMessage(fmt::format(
                         "§6[Attack Event] §f{} attacked {} ({}) - Distance: {:.1f}m {}",
                         event.attackerName,

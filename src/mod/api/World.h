@@ -15,6 +15,8 @@
 #include "ll/api/service/Bedrock.h"
 #include "mc/world/level/Level.h"
 #include "mc/world/actor/player/Player.h"
+#include "mc/client/game/ClientInstance.h"
+#include "mc/client/player/LocalPlayer.h"
 
 namespace origin_mod {
 class OriginMod;

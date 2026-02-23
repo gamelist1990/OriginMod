@@ -1,6 +1,5 @@
 #include "mod/api/Entity.h"
 #include "mod/OriginMod.h"
-#include "mod/util/DebugLogger.h"
 
 #include "mc/world/actor/Actor.h"
 

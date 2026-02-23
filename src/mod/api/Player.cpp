@@ -2,7 +2,6 @@
 #include "mod/api/World.h"
 
 #include "mod/OriginMod.h"
-#include "mod/util/DebugLogger.h"
 
 #include "ll/api/service/Bedrock.h"
 
@@ -176,7 +175,7 @@ void Player::localSendMessage(std::string_view msg) const {
                 return;
             }
         } catch (...) {
-            origin_mod::util::debugLog("exception while calling getLocalPlayer/displayClientMessage");
+            // エラー時は何もしない
         }
     }
 
