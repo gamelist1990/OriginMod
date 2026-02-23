@@ -20,6 +20,12 @@ void World::onReceiveChat(const std::string& message, origin_mod::OriginMod& mod
     emitChatSend(chatEvent);
 }
 
+void World::onPacketReceive(const std::string& packetType, const std::string& message, const std::string& sender, origin_mod::OriginMod& mod) {
+    // パケット受信イベントを発行
+    PacketReceiveEvent packetEvent(packetType, message, sender);
+    emitPacketReceive(packetEvent);
+}
+
 void World::onTick() {
     TickEvent tickEvent;
     tickEvent.tick = ++mCurrentTick;

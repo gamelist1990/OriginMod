@@ -72,12 +72,25 @@ struct TickEvent {
     uint64_t tick{0};
 };
 
+struct PacketReceiveEvent {
+    std::string packetType;
+    std::string message;
+    std::string senderName;
+    bool cancel{false};
+
+    PacketReceiveEvent(std::string type, std::string msg, std::string sender = "")
+    : packetType(std::move(type)),
+      message(std::move(msg)),
+      senderName(std::move(sender)) {}
+};
+
 class World {
 public:
     static World& instance();
 
     struct BeforeEvents {
         EventSignal<ChatSendEvent> chatSend;
+        EventSignal<PacketReceiveEvent> packetReceive;
     };
 
     struct AfterEvents {
@@ -89,11 +102,13 @@ public:
 
     // Internal: emitters used by modules.
     void emitChatSend(ChatSendEvent& ev) { mBefore.chatSend.emit(ev); }
+    void emitPacketReceive(PacketReceiveEvent& ev) { mBefore.packetReceive.emit(ev); }
     void emitTick(TickEvent& ev) { mAfter.tick.emit(ev); }
 
     // Public methods called by ChatHook
     void onPlayerChat(const std::string& playerName, const std::string& message, origin_mod::OriginMod& mod);
     void onReceiveChat(const std::string& message, origin_mod::OriginMod& mod);
+    void onPacketReceive(const std::string& packetType, const std::string& message, const std::string& sender, origin_mod::OriginMod& mod);
     void onTick();
 
 private:
