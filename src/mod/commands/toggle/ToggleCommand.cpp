@@ -22,8 +22,8 @@ void registerToggle(origin_mod::commands::OriginCommandRegistry& command) {
             fm.initialize(ctx.mod);
 
             // args: tokens after subcommand name. Examples:
-            // -origin toggle list            -> args = {"list"}
-            // -origin toggle set <feature> [on|off] -> args = {"set","feature","on"}
+            // -toggle list                       -> args = {"list"}
+            // -toggle set <feature> [on|off]     -> args = {"set","feature","on"}
 
             if (args.empty() || (args.size() == 1 && args[0] == "list")) {
                 auto list = fm.list();

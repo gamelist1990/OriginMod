@@ -63,35 +63,29 @@ LL_TYPE_INSTANCE_HOOK(
         msg = chatEv.message;
     }
 
-    // Parse: -origin <sub> [args...]
+    // Parse: -<command> [args...]
     std::istringstream iss(msg.substr(1));
     std::vector<std::string> toks;
     std::string tok;
     while (iss >> tok) toks.push_back(tok);
 
-    // special-case top-level help shortcut (the user typed "-help" instead of
-    // "-origin help").  swallow the chat and execute the same command so the
-    // behaviour matches expectations.
-    if (toks.size() == 1 && toks[0] == "help") {
-        auto reply = [mod](std::string const& s) {
-            origin_mod::api::Player{*mod}.localSendMessage(s);
-        };
-        if (!self->dispatchOriginSubcommand(*mod, "help", {}, reply)) {
-            origin_mod::api::Player{*mod}.localSendMessage("§cコマンドが見つかりません: help");
-        }
-        return; // always swallow
+    if (toks.empty()) {
+        return; // nothing after hyphen; drop chat
     }
 
-    if (toks.size() < 2) {
-        return; // treat as command and swallow
-    }
-    if (toks[0] != "origin") {
-        return origin(pkt); // not ours
-    }
-
-    std::string sub = toks[1];
+    std::string sub = toks[0];
     std::vector<std::string> args;
-    if (toks.size() > 2) args.assign(toks.begin() + 2, toks.end());
+    if (toks.size() > 1) args.assign(toks.begin() + 1, toks.end());
+
+    auto reply = [mod](std::string const& s) {
+        origin_mod::api::Player{*mod}.localSendMessage(s);
+    };
+
+    if (!self->dispatchOriginSubcommand(*mod, sub, args, reply)) {
+        origin_mod::api::Player{*mod}.localSendMessage("§cコマンドが見つかりません: {}", sub);
+    }
+
+    return; // swallow command chat
 
     auto reply = [mod](std::string const& s) {
         origin_mod::api::Player{*mod}.localSendMessage(s);

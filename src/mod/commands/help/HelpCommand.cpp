@@ -35,9 +35,9 @@ void registerHelp(origin_mod::commands::OriginCommandRegistry& command) {
         auto reply = [&ctx](std::string const& s) { ctx.player.localSendMessage(s); };
         printHeader(ctx.mod, reply);
 
-        ctx.player.localSendMessage("  §e-origin help §7- §fこのヘルプ");
+        ctx.player.localSendMessage("  §e-help §7- §fこのヘルプ");
         for (auto const& meta : command.list()) {
-            ctx.player.localSendMessage("  §e-origin {} §7- §f{}", meta.name, meta.description);
+            ctx.player.localSendMessage("  §e-{} §7- §f{}", meta.name, meta.description);
         }
         ctx.player.localSendMessage("§7========================================");
     };
