@@ -10,6 +10,11 @@
 
 #include "mod/api/Player.h"
 
+// LeviLamina includes for Player access
+#include "ll/api/service/Bedrock.h"
+#include "mc/world/level/Level.h"
+#include "mc/world/actor/player/Player.h"
+
 namespace origin_mod {
 class OriginMod;
 }
@@ -110,6 +115,29 @@ public:
     void onReceiveChat(const std::string& message, origin_mod::OriginMod& mod);
     void onPacketReceive(const std::string& packetType, const std::string& message, const std::string& sender, origin_mod::OriginMod& mod);
     void onTick();
+
+    // Player list utility
+    std::vector<std::string> getPlayerNames() const;
+
+    // Player objects utility (ユーザー提案)
+    template<typename Func>
+    void forEachPlayer(Func&& func) const {
+        try {
+            auto level = ll::service::getLevel();
+            if (!level) {
+                return;
+            }
+
+            // forEachPlayerを使ってPlayer型オブジェクトにアクセス
+            level->forEachPlayer(std::function<bool(::Player&)>([&func](::Player& player) -> bool {
+                func(player);
+                return true; // 継続
+            }));
+
+        } catch (const std::exception&) {
+            // エラー時は何もしない
+        }
+    }
 
 private:
     World() = default;

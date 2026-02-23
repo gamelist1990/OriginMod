@@ -1,6 +1,11 @@
 #include "mod/api/World.h"
 #include "mod/OriginMod.h"
 
+// LeviLamina includes for player access
+#include "ll/api/service/Bedrock.h"
+#include "mc/world/level/Level.h"
+#include "mc/world/actor/player/Player.h"
+
 namespace origin_mod::api {
 
 World& World::instance() {
@@ -30,6 +35,31 @@ void World::onTick() {
     TickEvent tickEvent;
     tickEvent.tick = ++mCurrentTick;
     emitTick(tickEvent);
+}
+
+std::vector<std::string> World::getPlayerNames() const {
+    std::vector<std::string> playerNames;
+
+    try {
+        auto level = ll::service::getLevel();
+        if (!level) {
+            return playerNames;
+        }
+
+        // forEachPlayerを使ってプレイヤー名を収集
+        level->forEachPlayer(std::function<bool(::Player&)>([&playerNames](::Player& player) -> bool {
+            std::string name = player.getRealName();
+            if (!name.empty()) {
+                playerNames.push_back(name);
+            }
+            return true; // 継続
+        }));
+
+    } catch (const std::exception&) {
+        // エラー時は空のリストを返す
+    }
+
+    return playerNames;
 }
 
 } // namespace origin_mod::api
