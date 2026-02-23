@@ -15,7 +15,9 @@
 #include "ll/api/memory/Hook.h"
 #include "mc/network/packet/TextPacket.h"
 #include "mc/network/packet/TextPacketPayload.h"
+#include "mc/network/MinecraftPacketIds.h"
 #include "mc/client/network/ClientNetworkHandler.h"
+#include "mc/network/LoopbackPacketSender.h"
 #include "mc/network/NetworkIdentifier.h"
 #include "mc/network/packet/TextPacketType.h"
 
@@ -24,6 +26,52 @@ namespace origin_mod::hooks {
 // グローバル変数
 static ll::event::ListenerPtr tickListener = nullptr;
 static std::atomic<OriginMod*> gChatHookMod{nullptr};
+
+// LoopbackPacketSender::$sendToServer フック（送信処理 - フラリアル方式）
+LL_TYPE_INSTANCE_HOOK(
+    LoopbackPacketSenderHook,
+    ll::memory::HookPriority::Highest,
+    LoopbackPacketSender,
+    &LoopbackPacketSender::$sendToServer,
+    void,
+    ::Packet& packet
+) {
+    auto* mod = gChatHookMod.load(std::memory_order_relaxed);
+    if (mod) {
+        try {
+            if (packet.getId() == MinecraftPacketIds::Text) {
+                auto* textPacket = static_cast<TextPacket*>(&packet);
+                std::string message = textPacket->getMessage();
+                // コマンド判定
+                if (!message.empty() && message[0] == '-') {
+                    // コマンドを処理
+                    std::string commandLine = message.substr(1); 
+                    if (!commandLine.empty()) {
+                        // コマンドと引数を分離
+                        std::istringstream iss(commandLine);
+                        std::string command;
+                        iss >> command;
+
+                        std::vector<std::string> args;
+                        std::string arg;
+                        while (iss >> arg) {
+                            args.push_back(arg);
+                        }
+                        auto& cmdManager = commands::CommandManager::getInstance();
+                        cmdManager.executeCommand(*mod, command, args);
+                    }
+
+                    return;
+                }
+            }
+        } catch (const std::exception& e) {
+            mod->getSelf().getLogger().error("Exception in sendToServer hook: {}", e.what());
+        } catch (...) {
+            mod->getSelf().getLogger().error("Unknown exception in sendToServer hook");
+        }
+    }
+    origin(packet);
+}
 
 // ClientNetworkHandler::$handle TextPacketフック（受信処理）
 LL_TYPE_INSTANCE_HOOK(
@@ -35,27 +83,15 @@ LL_TYPE_INSTANCE_HOOK(
     ::NetworkIdentifier const& source,
     ::TextPacket const& packet
 ) {
-    // 最優先でログ出力（他の処理より前）
     auto* hookMod = gChatHookMod.load(std::memory_order_relaxed);
-    if (hookMod) {
-        hookMod->getSelf().getLogger().info("=== ClientNetworkHandler TextPacket DETECTED ===");
-    }
-
-    // 元の処理を呼び出し
     origin(source, packet);
-
-    // パケット処理後にカスタムイベントを発行
     auto* mod = gChatHookMod.load(std::memory_order_relaxed);
     if (mod) {
         try {
             // パケット処理とコマンド実行
             std::string message = packet.getMessage();
             std::string author = packet.getAuthorOrEmpty();
-
-            // フラリアル方式: filteredMessageを優先的にチェック
             std::string actualMessage = message;
-            // TODO: filteredMessageのアクセス方法を調査
-
             mod->getSelf().getLogger().debug("ClientNetworkHandler TextPacket received - Author: '{}', Message: '{}'",
                 author.empty() ? "System" : author, message);
 
@@ -63,45 +99,8 @@ LL_TYPE_INSTANCE_HOOK(
             if (author.empty() && !message.empty()) {
                 mod->getSelf().getLogger().info("Server custom message detected: '{}'", message);
             }
-
-            // コマンド処理（Chat以外も対象に）
-            if (!message.empty() && message[0] == '!') {
-                // サーバーカスタムメッセージでもコマンドとして処理
-                mod->getSelf().getLogger().info("Command detected in packet - Author: '{}', Message: '{}'",
-                    author.empty() ? "System" : author, message);
-
-                // コマンドの場合、CommandManagerで処理
-                std::string commandLine = message.substr(1); // '!'を除去
-                if (!commandLine.empty()) {
-                    // コマンドと引数を分離
-                    std::istringstream iss(commandLine);
-                    std::string command;
-                    iss >> command;
-
-                    std::vector<std::string> args;
-                    std::string arg;
-                    while (iss >> arg) {
-                        args.push_back(arg);
-                    }
-
-                    auto& cmdManager = commands::CommandManager::getInstance();
-                    bool handled = cmdManager.executeCommand(*mod, command, args);
-
-                    if (handled) {
-                        mod->getSelf().getLogger().info("Command '{}' executed successfully via packet interception", command);
-                        return; // コマンドが処理された場合は、以降の処理をスキップ
-                    } else {
-                        mod->getSelf().getLogger().debug("Unknown command '{}' via ClientNetworkHandler", command);
-                    }
-                }
-            }
-
             auto& world = api::World::instance();
-
-            // PacketReceiveイベントを発行
             world.onPacketReceive("TextPacket", message, author, *mod);
-
-            // 既存のAPIとの後方互換性
             if (!message.empty()) {
                 if (!author.empty()) {
                     world.onPlayerChat(author, message, *mod);
@@ -133,12 +132,20 @@ void initializeChatHook(OriginMod& mod) {
         mod.getSelf().getLogger().debug("  - {}: {}", cmd.name, cmd.description);
     }
 
-    // TextPacketフックを有効化（ClientNetworkHandlerのみ）
+    // TextPacketフックを有効化（受信側）
     try {
         ClientNetworkHandlerTextPacketHook::hook();
         mod.getSelf().getLogger().info("ClientNetworkHandler::$handle TextPacket hook registered successfully");
     } catch (const std::exception& e) {
         mod.getSelf().getLogger().error("Failed to register ClientNetworkHandler TextPacket hook: {}", e.what());
+    }
+
+    // パケット送信フックを有効化（送信側 - フラリアル方式）
+    try {
+        LoopbackPacketSenderHook::hook();
+        mod.getSelf().getLogger().info("LoopbackPacketSender::$sendToServer hook registered successfully");
+    } catch (const std::exception& e) {
+        mod.getSelf().getLogger().error("Failed to register LoopbackPacketSender hook: {}", e.what());
     }
 
     gChatHookMod.store(&mod, std::memory_order_relaxed);
@@ -153,14 +160,6 @@ void initializeChatHook(OriginMod& mod) {
             world.onTick();
         }
     );
-
-    if (tickListener) {
-        mod.getSelf().getLogger().info("Universal ClientNetworkHandler chat hook initialized successfully - {} commands available", commands.size());
-        mod.getSelf().getLogger().info("Features: Universal TextPacket monitoring, Packet events, Server+Local command support");
-        mod.getSelf().getLogger().info("Note: Commands work in both local worlds and servers via unified packet interception");
-    } else {
-        mod.getSelf().getLogger().error("Failed to register tick listener");
-    }
 }
 
 void shutdownChatHook() {

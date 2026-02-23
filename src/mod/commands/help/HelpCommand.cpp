@@ -10,7 +10,6 @@ namespace origin_mod::commands::help {
 void executeHelp(OriginMod& mod, const std::vector<std::string>& args) {
     origin_mod::api::Player player{mod};
 
-    // ヘッダーを表示
     player.localSendMessage("§7========================================");
 
     std::string version = "0.0.0";
@@ -20,8 +19,6 @@ void executeHelp(OriginMod& mod, const std::vector<std::string>& args) {
 
     player.localSendMessage(fmt::format("§b {} §fv{}", mod.getSelf().getName(), version));
     player.localSendMessage("§7----------------------------------------");
-
-    // コマンド一覧を取得して表示
     auto& cmdManager = CommandManager::getInstance();
     auto commands = cmdManager.getCommands();
 
