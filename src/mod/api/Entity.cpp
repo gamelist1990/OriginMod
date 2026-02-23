@@ -4,6 +4,7 @@
 #include "mc/world/actor/Actor.h"
 
 #include "ll/api/event/EventBus.h"
+#include "ll/api/event/Listener.h"
 #include "ll/api/event/world/LevelTickEvent.h"
 #include "ll/api/service/Bedrock.h"
 
