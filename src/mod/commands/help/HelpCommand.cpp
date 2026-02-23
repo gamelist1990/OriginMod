@@ -4,8 +4,8 @@
 #include <fmt/format.h>
 
 #include "mod/OriginMod.h"
-#include "mod/commands/OriginCommandRegistrar.h"
 #include "mod/commands/OriginCommandRegistry.h"
+#include "mod/commands/help/HelpCommand.h"
 
 namespace {
 
@@ -25,7 +25,11 @@ void printHeader(origin_mod::OriginMod& mod, std::function<void(std::string cons
     reply("§7----------------------------------------");
 }
 
-void registerHelp(origin_mod::commands::OriginCommandRegistry& command) {
+} // namespace
+
+namespace origin_mod::commands::builtin {
+
+bool registerHelp(origin_mod::commands::OriginCommandRegistry& command) {
     origin_mod::commands::OriginCommandRegistry::Descriptor d;
     d.name = "help";
     d.description = "ヘルプを表示します";
@@ -41,9 +45,7 @@ void registerHelp(origin_mod::commands::OriginCommandRegistry& command) {
         }
         ctx.player.localSendMessage("§7========================================");
     };
-    command.registerCommand(std::move(d));
+    return command.registerCommand(std::move(d));
 }
 
-} // namespace
-
-ORIGINMOD_REGISTER_ORIGIN_COMMAND(registerHelp);
+} // namespace origin_mod::commands::builtin

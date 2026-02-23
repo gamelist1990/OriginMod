@@ -15,13 +15,93 @@
 #include "mod/api/Player.h"
 #include "mod/api/World.h"
 #include "mod/modules/ChatCommandModule.h"
+#include <fmt/format.h>
 
 namespace origin_mod::hooks {
 
 namespace {
 
-std::atomic<origin_mod::modules::NativeCommandModule*> gModule{nullptr};
-std::atomic<origin_mod::OriginMod*>                        gMod{nullptr};
+// Split a UTF-8 string by common chat separators.
+// - ASCII whitespace (space, tab, CR, LF, etc.)
+// - Full-width space U+3000 (UTF-8: E3 80 80)
+static std::vector<std::string> splitChatTokens(std::string const& s, size_t startIndex) {
+    std::vector<std::string> out;
+    std::string              cur;
+
+    auto flush = [&]() {
+        if (!cur.empty()) {
+            out.emplace_back(std::move(cur));
+            cur.clear();
+        }
+    };
+
+    auto isAsciiSpace = [](unsigned char c) {
+        switch (c) {
+        case ' ': case '\t': case '\n': case '\r': case '\v': case '\f':
+            return true;
+        default:
+            return false;
+        }
+    };
+
+    static constexpr char kFullWidthSpaceUtf8[] = "\xE3\x80\x80"; // U+3000
+
+    for (size_t i = startIndex; i < s.size();) {
+        unsigned char c = static_cast<unsigned char>(s[i]);
+        if (isAsciiSpace(c)) {
+            flush();
+            ++i;
+            continue;
+        }
+        if (i + 2 < s.size() && s.compare(i, 3, kFullWidthSpaceUtf8) == 0) {
+            flush();
+            i += 3;
+            continue;
+        }
+
+        cur.push_back(static_cast<char>(c));
+        ++i;
+    }
+    flush();
+    return out;
+}
+
+static void normalizeSubcommandInPlace(std::string& sub) {
+    // Trim ASCII whitespace.
+    while (!sub.empty()) {
+        unsigned char c = static_cast<unsigned char>(sub.front());
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' || c == '\f') {
+            sub.erase(sub.begin());
+            continue;
+        }
+        break;
+    }
+    while (!sub.empty()) {
+        unsigned char c = static_cast<unsigned char>(sub.back());
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' || c == '\f') {
+            sub.pop_back();
+            continue;
+        }
+        break;
+    }
+
+    // Trim full-width spaces (U+3000) at both ends.
+    static constexpr std::string_view kFw = "\xE3\x80\x80";
+    while (sub.size() >= kFw.size() && std::string_view{sub}.starts_with(kFw)) {
+        sub.erase(0, kFw.size());
+    }
+    while (sub.size() >= kFw.size() && std::string_view{sub}.ends_with(kFw)) {
+        sub.erase(sub.size() - kFw.size());
+    }
+
+    // Be forgiving: allow users to type things like "--help" or "/help".
+    while (!sub.empty() && (sub.front() == '-' || sub.front() == '/' || sub.front() == '.')) {
+        sub.erase(sub.begin());
+    }
+}
+
+std::atomic<::origin_mod::modules::NativeCommandModule*> gModule{nullptr};
+std::atomic<::origin_mod::OriginMod*>                    gMod{nullptr};
 
 LL_TYPE_INSTANCE_HOOK(
     OriginModOutgoingChatHook,
@@ -64,16 +144,14 @@ LL_TYPE_INSTANCE_HOOK(
     }
 
     // Parse: -<command> [args...]
-    std::istringstream iss(msg.substr(1));
-    std::vector<std::string> toks;
-    std::string tok;
-    while (iss >> tok) toks.push_back(tok);
+    std::vector<std::string> toks = splitChatTokens(msg, /*startIndex*/ 1);
 
     if (toks.empty()) {
         return; // nothing after hyphen; drop chat
     }
 
     std::string sub = toks[0];
+    normalizeSubcommandInPlace(sub);
     std::vector<std::string> args;
     if (toks.size() > 1) args.assign(toks.begin() + 1, toks.end());
 
@@ -82,19 +160,7 @@ LL_TYPE_INSTANCE_HOOK(
         origin_mod::api::Player{*mod}.localSendMessage(s);
     };
 
-    if (!self->dispatchOriginSubcommand(*mod, sub, args, reply)) {
-        origin_mod::api::Player{*mod}.localSendMessage("§cコマンドが見つかりません: {}", sub);
-    }
-
-    return; // swallow command chat
-
-    auto reply = [mod](std::string const& s) {
-        origin_mod::api::Player{*mod}.localSendMessage(s);
-    };
-
-    if (!self->dispatchOriginSubcommand(*mod, sub, args, reply)) {
-        origin_mod::api::Player{*mod}.localSendMessage("§cコマンドが見つかりません: {}", sub);
-    }
+    (void)self->dispatchOriginSubcommand(*mod, sub, args, reply);
 
     return; // swallow command chat
 }

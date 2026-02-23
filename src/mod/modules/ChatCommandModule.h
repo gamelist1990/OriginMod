@@ -26,12 +26,13 @@ public:
 private:
     origin_mod::commands::OriginCommandRegistry mRegistry;
     bool                                    mRegistryBuilt{false};
+    bool                                    mAnnouncedRegistry{false};
 
     // Reinstall when client joins a level (local world or external server).
     ll::event::ListenerPtr mStartJoinListener;
     ll::event::ListenerPtr mJoinListener;
 
-    void buildRegistry();
+    void buildRegistry(OriginMod& mod);
     void installCommands(OriginMod& mod);
 };
 

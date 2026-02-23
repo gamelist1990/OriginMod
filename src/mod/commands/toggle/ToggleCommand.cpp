@@ -4,14 +4,18 @@
 #include <fmt/format.h>
 
 #include "mod/OriginMod.h"
-#include "mod/commands/OriginCommandRegistrar.h"
 #include "mod/commands/OriginCommandRegistry.h"
 #include "mod/commands/OriginCommandTypes.h"
 #include "mod/features/FeatureManager.h"
+#include "mod/commands/toggle/ToggleCommand.h"
 
 namespace {
 
-void registerToggle(origin_mod::commands::OriginCommandRegistry& command) {
+} // namespace
+
+namespace origin_mod::commands::builtin {
+
+bool registerToggle(origin_mod::commands::OriginCommandRegistry& command) {
     origin_mod::commands::OriginCommandRegistry::Descriptor d;
     d.name = "toggle";
     d.description = "Feature の有効/無効を切り替えます";
@@ -63,9 +67,7 @@ void registerToggle(origin_mod::commands::OriginCommandRegistry& command) {
 
             ctx.player.localSendMessage("§c[!] コマンドが不正です。");
     };
-    command.registerCommand(std::move(d));
+    return command.registerCommand(std::move(d));
 }
 
-} // namespace
-
-ORIGINMOD_REGISTER_ORIGIN_COMMAND(registerToggle);
+} // namespace origin_mod::commands::builtin

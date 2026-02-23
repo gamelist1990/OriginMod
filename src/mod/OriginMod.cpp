@@ -15,9 +15,7 @@ OriginMod& OriginMod::getInstance() {
 }
 
 bool OriginMod::load() {
-    // always enable our debug logger at runtime; the build-time guard now only
-    // controls the default value.  this lets us write debug.txt even when the
-    // DLL was compiled in release mode.
+    //Debugを有効にするときはTrueにね
     origin_mod::util::setDebugEnabled(true);
 
     getSelf().getLogger().debug("Loading...");

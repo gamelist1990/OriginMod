@@ -66,21 +66,15 @@ void Player::sendMessage(std::string_view msg) const {
 }
 
 void Player::localSendMessage(std::string_view msg) const {
-    origin_mod::util::debugLog("localSendMessage: " + std::string(msg));
     auto ciOpt = ll::service::bedrock::getClientInstance();
-    origin_mod::util::debugLog(std::string("getClientInstance returned ") + (ciOpt ? "non-null" : "null"));
     if (ciOpt) {
         try {
             if (auto *lp = ciOpt->getLocalPlayer()) {
-                origin_mod::util::debugLog("got LocalPlayer pointer");
                 lp->displayClientMessage(std::string{msg}, std::nullopt);
                 return;
-            } else {
-                origin_mod::util::debugLog("getLocalPlayer returned null");
             }
         } catch (...) {
             origin_mod::util::debugLog("exception while calling getLocalPlayer/displayClientMessage");
-            // ignored, fall through to logger below
         }
     }
 

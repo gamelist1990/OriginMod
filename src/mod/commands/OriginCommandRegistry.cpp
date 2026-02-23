@@ -7,6 +7,57 @@
 
 namespace origin_mod::commands {
 
+static std::string normalizeLookupKey(std::string_view name) {
+    std::string s{name};
+
+    auto trimAscii = [](std::string& x) {
+        while (!x.empty()) {
+            unsigned char c = static_cast<unsigned char>(x.front());
+            if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' || c == '\f') {
+                x.erase(x.begin());
+                continue;
+            }
+            break;
+        }
+        while (!x.empty()) {
+            unsigned char c = static_cast<unsigned char>(x.back());
+            if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' || c == '\f') {
+                x.pop_back();
+                continue;
+            }
+            break;
+        }
+    };
+
+    auto trimFullWidthSpace = [](std::string& x) {
+        static constexpr std::string_view kFw = "\xE3\x80\x80"; // U+3000
+        while (x.size() >= kFw.size() && std::string_view{x}.starts_with(kFw)) {
+            x.erase(0, kFw.size());
+        }
+        while (x.size() >= kFw.size() && std::string_view{x}.ends_with(kFw)) {
+            x.erase(x.size() - kFw.size());
+        }
+    };
+
+    trimAscii(s);
+    trimFullWidthSpace(s);
+
+    // Accept prefixed forms.
+    while (!s.empty() && (s.front() == '-' || s.front() == '/' || s.front() == '.')) {
+        s.erase(s.begin());
+    }
+
+    trimAscii(s);
+    trimFullWidthSpace(s);
+
+    std::string out;
+    out.reserve(s.size());
+    for (unsigned char c : s) {
+        out.push_back(static_cast<char>(std::tolower(c)));
+    }
+    return out;
+}
+
 OriginCommandRegistry::Builder::Builder(OriginCommandRegistry& reg, std::string name)
 : mReg(reg),
   mName(std::move(name)) {}
@@ -39,7 +90,7 @@ std::vector<OriginCommandRegistry::CommandMeta> OriginCommandRegistry::list() co
 }
 
 std::optional<OriginCommandRegistry::CommandMeta> OriginCommandRegistry::get(std::string_view name) const {
-    auto key = toLower(name);
+    auto key = normalizeLookupKey(name);
     auto it  = mEntries.find(key);
     if (it == mEntries.end()) {
         return std::nullopt;
@@ -48,7 +99,7 @@ std::optional<OriginCommandRegistry::CommandMeta> OriginCommandRegistry::get(std
 }
 
 bool OriginCommandRegistry::execute(origin_mod::OriginMod& mod, std::string_view name, std::vector<std::string> const& args, ReplyFn reply) const {
-    auto key = toLower(name);
+    auto key = normalizeLookupKey(name);
     auto it  = mEntries.find(key);
     if (it == mEntries.end()) {
         return false;
