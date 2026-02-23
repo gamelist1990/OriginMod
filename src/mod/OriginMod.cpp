@@ -1,6 +1,5 @@
 #include "mod/OriginMod.h"
 #include "mod/hooks/ChatHook.h"
-#include "mod/events/DamageTracker.h"
 #include "mod/features/FeatureManager.h"
 #include "mod/config/ConfigManager.h"
 #include "mod/config/MessageConfig.h"
@@ -42,9 +41,6 @@ bool OriginMod::enable() {
         // 4. チャットフックを初期化（コマンドシステムも含む）
         hooks::initializeChatHook(*this);
 
-        // 5. 常駐イベント（ダメージ/HP推定など）
-        events::DamageTracker::instance().initialize(*this);
-
         getSelf().getLogger().info("OriginMod successfully enabled! (World Event Architecture)");
         return true;
 
@@ -58,9 +54,6 @@ bool OriginMod::disable() {
     getSelf().getLogger().info("OriginMod Disabling...");
 
     try {
-        // 0. 常駐イベントを終了
-        events::DamageTracker::instance().shutdown();
-
         // 1. チャットフックを終了
         hooks::shutdownChatHook();
 

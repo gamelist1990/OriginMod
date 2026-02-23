@@ -30,12 +30,9 @@ public:
     [[nodiscard]] Location location() const;
     [[nodiscard]] int getHealth() const;
 
-    // --- Health estimation helpers ---
-    // Client-side note: remote players' real HP is often not replicated.
-    // These helpers allow features (e.g., attack HUD) to maintain a best-effort estimate.
-    static void applyDamageEstimate(::Actor* actor, float damage);
-    static void applyHealEstimate(::Actor* actor, float heal);
-    static void clearHealthEstimate(::Actor* actor);
+    // True only when we observe the moment this actor's health becomes 0 (death moment).
+    // Returns true once per death (consumed).
+    [[nodiscard]] bool isDeath() const;
 
     // Entity state checks
     [[nodiscard]] bool isValid() const;

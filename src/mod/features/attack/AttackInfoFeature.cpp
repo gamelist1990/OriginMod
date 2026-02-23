@@ -8,7 +8,6 @@
 #include "mod/api/Entity.h"
 #include "mod/api/Player.h"
 #include "mod/api/World.h"
-#include "mod/events/DamageTracker.h"
 #include "mod/features/FeatureRegistrar.h"
 #include "mod/features/FeatureRegistry.h"
 #include "mod/features/IFeature.h"
@@ -95,35 +94,6 @@ private:
             auto& target = event.target();
             auto& player = event.self();
 
-            // ダメージ/クリティカル推定
-            // - 可能なら ActorHurtEvent で取れた「直近ダメージ」を利用
-            // - 取れない環境ではフォールバックで 1.0
-            float estimatedDamage = 1.0f;
-            bool estimatedCritical = false;
-
-            const int64_t playerUid = origin_mod::events::DamageTracker::tryGetUid(player);
-            const int64_t targetUid = origin_mod::events::DamageTracker::tryGetUid(target);
-            if (targetUid != 0) {
-                auto rec = origin_mod::events::DamageTracker::instance().getRecentDamage(
-                    targetUid,
-                    std::chrono::milliseconds(400),
-                    playerUid
-                );
-                if (rec.has_value() && rec->damage > 0.0f) {
-                    estimatedDamage = rec->damage;
-                    estimatedCritical = rec->wasCritical;
-                }
-            }
-
-            // クリティカルは PlayerAttackEvent から確定できないので簡易推定のみ
-            // （落下中で地面についていない等）
-            try {
-                if (!player.isOnGround() && player.getFallDistance() > 0.0f && !player.isInWater() && !player.isInLava()) {
-                    estimatedCritical = true;
-                }
-            } catch (...) {
-            }
-
             // 攻撃データを作成
             api::PlayerAttackEventData attackData{};
             attackData.attackerName = player.getRealName();
@@ -150,9 +120,9 @@ private:
             double dz = attackData.targetZ - attackData.attackerZ;
             attackData.distance = std::sqrt(dx*dx + dy*dy + dz*dz);
 
-            // ダメージ情報（LeviLamina PlayerAttackEventには直接の情報がない）
-            attackData.damage = estimatedDamage;
-            attackData.wasCritical = estimatedCritical;
+            // ダメージ情報（この構成では推定しない）
+            attackData.damage = 0.0;
+            attackData.wasCritical = false;
 
             // HP情報を取得
             try {
@@ -192,13 +162,11 @@ private:
 
             // UI表示
             std::string message = fmt::format(
-                "§e[Attack] §fTarget: {} {} §f({:.0f}m) {} §7DMG:{:.1f}{}",
+                "§e[Attack] §fTarget: {} {} §f({:.0f}m) {}",
                 attackData.targetName,
                 hpInfo,
                 attackData.distance,
-                attackData.targetIsPlayer ? "§b[Player]" : "",
-                attackData.damage,
-                attackData.wasCritical ? " §6CRIT" : ""
+                attackData.targetIsPlayer ? "§b[Player]" : ""
             );
 
             mPlayer->localSendMessage(message);
