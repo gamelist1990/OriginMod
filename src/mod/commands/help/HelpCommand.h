@@ -1,10 +1,15 @@
 #pragma once
 
-namespace origin_mod::commands {
-class OriginCommandRegistry;
+#include <vector>
+#include <string>
+
+namespace origin_mod {
+class OriginMod;
 }
 
-namespace origin_mod::commands::builtin {
-// Register built-in "help" subcommand into registry.
-bool registerHelp(origin_mod::commands::OriginCommandRegistry& registry);
-} // namespace origin_mod::commands::builtin
+namespace origin_mod::commands::help {
+
+// ヘルプコマンドを実行
+void executeHelp(OriginMod& mod, const std::vector<std::string>& args);
+
+} // namespace origin_mod::commands::help

@@ -48,6 +48,18 @@ std::string Player::name() const {
 
 void Player::sendMessage(std::string_view msg) const {
     // Server-visible chat.
+    // Emit `World::ChatSendEvent` to allow listeners to inspect/cancel outgoing chat.
+    try {
+        origin_mod::api::ChatSendEvent ev(std::string{msg}, mMod);
+        World::instance().emitChatSend(ev);
+        if (ev.cancel) {
+            mMod.getSelf().getLogger().debug("ChatSendEvent cancelled by listener, dropping outgoing chat: {}", msg);
+            return;
+        }
+    } catch (...) {
+        // If event system isn't available for some reason, fall back to normal behavior.
+    }
+
     auto mcOpt = ll::service::bedrock::getMinecraft(true);
     if (!mcOpt) {
         // fallback

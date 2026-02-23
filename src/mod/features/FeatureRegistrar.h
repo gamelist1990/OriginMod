@@ -1,37 +1,50 @@
 #pragma once
 
-#include <functional>
 #include <vector>
+#include <functional>
 
 namespace origin_mod::features {
 
-class FeatureRegistry;
+class FeatureRegistry; // forward declaration
 
 class FeatureRegistrar {
 public:
-    using RegisterFn = std::function<void(FeatureRegistry&)>;
+    using Callback = void (*)(FeatureRegistry&);
 
-    static FeatureRegistrar& instance();
-    [[nodiscard]] bool add(RegisterFn fn);
-    void applyAll(FeatureRegistry& registry) const;
+    static FeatureRegistrar& instance() {
+        static FeatureRegistrar inst;
+        return inst;
+    }
+
+    void add(Callback cb) {
+        mCallbacks.push_back(cb);
+    }
+
+    void applyAll(FeatureRegistry& reg) {
+        for (auto cb : mCallbacks) {
+            cb(reg);
+        }
+    }
 
 private:
     FeatureRegistrar() = default;
-    std::vector<RegisterFn> mFns;
+    std::vector<Callback> mCallbacks;
 };
 
 } // namespace origin_mod::features
 
-#ifndef ORIGINMOD_CONCAT_INNER
-#define ORIGINMOD_CONCAT_INNER(a, b) a##b
-#endif
-#ifndef ORIGINMOD_CONCAT
-#define ORIGINMOD_CONCAT(a, b) ORIGINMOD_CONCAT_INNER(a, b)
-#endif
-
-// Usage: ORIGINMOD_REGISTER_FEATURE(registerFn);
-#define ORIGINMOD_REGISTER_FEATURE(RegisterFn)                                                                    \
-    namespace {                                                                                                \
-    [[maybe_unused]] const bool ORIGINMOD_CONCAT(kOriginModFeatureRegistered_, __COUNTER__) =                          \
-        ::origin_mod::features::FeatureRegistrar::instance().add(RegisterFn);                                      \
-    } // namespace
+// Macro for registering feature initializer functions.  The argument should be a
+// function with signature `void(FeatureRegistry&)` (see the bottom of
+// `AimJitterFeature.cpp` for an example).  The generated static object will
+// run at startup and call `FeatureRegistrar::instance().add(fn)`.
+#define ORIGINMOD_REGISTER_FEATURE(fn)                                    \
+    namespace {                                                           \
+        struct _originmod_feature_registrar_##fn {                         \
+            _originmod_feature_registrar_##fn() {                          \
+                origin_mod::features::FeatureRegistrar::instance().add(fn); \
+            }                                                              \
+        };                                                                 \
+        static _originmod_feature_registrar_##fn                           \
+            _originmod_feature_registrar_instance_##fn; \
+                    \
+    }

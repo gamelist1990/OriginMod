@@ -1,11 +1,9 @@
 #include "mod/OriginMod.h"
+#include "mod/hooks/ChatHook.h"
+#include "mod/features/FeatureManager.h"
 #include "mod/util/DebugLogger.h"
 
-#include <utility>
-
 #include "ll/api/mod/RegisterHelper.h"
-
-#include "mod/modules/ModuleRegistry.h"
 
 namespace origin_mod {
 
@@ -14,53 +12,57 @@ OriginMod& OriginMod::getInstance() {
     return instance;
 }
 
+ll::mod::NativeMod& OriginMod::getSelf() const {
+    return *ll::mod::NativeMod::current();
+}
+
 bool OriginMod::load() {
-    //Debugを有効にするときはTrueにね
+    // Debugを有効にする
     origin_mod::util::setDebugEnabled(true);
 
-    getSelf().getLogger().debug("Loading...");
+    getSelf().getLogger().info("OriginMod Loading...");
 
-    return loadModules();
+    return true;
 }
 
 bool OriginMod::enable() {
-    getSelf().getLogger().debug("Enabling...");
+    getSelf().getLogger().info("OriginMod Enabling...");
 
-    for (auto& m : mModules) {
-        if (!m->enable(*this)) {
-            getSelf().getLogger().error("Module enable failed: {}", m->id());
-            return false;
-        }
+    try {
+        // フィーチャーマネージャを初期化
+        auto& featureManager = features::FeatureManager::instance();
+        featureManager.initialize(*this);
+
+        // チャットフックを初期化（コマンドシステムも含む）
+        hooks::initializeChatHook(*this);
+
+        getSelf().getLogger().info("OriginMod successfully enabled!");
+        return true;
+
+    } catch (const std::exception& e) {
+        getSelf().getLogger().error("Failed to enable OriginMod: {}", e.what());
+        return false;
     }
-    return true;
 }
 
 bool OriginMod::disable() {
-    getSelf().getLogger().debug("Disabling...");
+    getSelf().getLogger().info("OriginMod Disabling...");
 
-    // Disable in reverse order.
-    for (auto it = mModules.rbegin(); it != mModules.rend(); ++it) {
-        auto& m = *it;
-        if (!m->disable(*this)) {
-            getSelf().getLogger().error("Module disable failed: {}", m->id());
-            return false;
-        }
+    try {
+        // チャットフックを終了
+        hooks::shutdownChatHook();
+
+        // フィーチャーマネージャを終了
+        auto& featureManager = features::FeatureManager::instance();
+        featureManager.shutdown(*this);
+
+        getSelf().getLogger().info("OriginMod successfully disabled!");
+        return true;
+
+    } catch (const std::exception& e) {
+        getSelf().getLogger().error("Failed to disable OriginMod: {}", e.what());
+        return false;
     }
-    return true;
-}
-
-bool OriginMod::loadModules() {
-    mModules = modules::ModuleRegistry::instance().createAll();
-    getSelf().getLogger().debug("Modules discovered: {}", mModules.size());
-
-    for (auto& m : mModules) {
-        getSelf().getLogger().debug("Loading module: {}", m->id());
-        if (!m->load(*this)) {
-            getSelf().getLogger().error("Module load failed: {}", m->id());
-            return false;
-        }
-    }
-    return true;
 }
 
 } // namespace origin_mod
