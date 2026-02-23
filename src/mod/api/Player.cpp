@@ -12,13 +12,7 @@
 #include "mc/network/packet/TextPacket.h"
 #include "mc/network/packet/TextPacketPayload.h"
 #include "mc/world/Minecraft.h"
-
-#if __has_include("mc/client/gui/GuiData.h")
 #include "mc/client/gui/GuiData.h"
-#define ORIGINMOD_HAS_GUIDATA 1
-#else
-#define ORIGINMOD_HAS_GUIDATA 0
-#endif
 
 namespace origin_mod::api {
 
@@ -74,7 +68,6 @@ void Player::localSendMessage(std::string_view msg) const {
     // Local-only message (HUD).
     auto ciOpt = ll::service::bedrock::getClientInstance();
     if (ciOpt) {
-#if ORIGINMOD_HAS_GUIDATA
         try {
             auto gui = ciOpt->getGuiData();
             if (gui.get()) {
@@ -84,7 +77,6 @@ void Player::localSendMessage(std::string_view msg) const {
             }
         } catch (...) {
         }
-#endif
     }
 
     // Fallback: log.
