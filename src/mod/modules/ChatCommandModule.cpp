@@ -25,7 +25,16 @@ bool NativeCommandModule::dispatchOriginSubcommand(
     ::origin_mod::commands::OriginCommandRegistry::ReplyFn reply
 ) {
     buildRegistry();
-    return mRegistry.execute(mod, sub, args, std::move(reply));
+    bool ok = mRegistry.execute(mod, sub, args, std::move(reply));
+    if (!ok) {
+        // logging for diagnostics
+        auto list = mRegistry.list();
+        mod.getSelf().getLogger().debug("dispatch failed for '{}', registry size={}", sub, list.size());
+        for (auto const& e : list) {
+            mod.getSelf().getLogger().debug("  entry '{}'", e.name);
+        }
+    }
+    return ok;
 }
 
 bool NativeCommandModule::load(OriginMod&) {
@@ -34,12 +43,13 @@ bool NativeCommandModule::load(OriginMod&) {
 }
 
 void NativeCommandModule::buildRegistry() {
-    if (mRegistryBuilt) {
-        return;
-    }
+    // Always rebuild the registry.  Static initialization order is not
+    // guaranteed across translation units, so command registration functions
+    // may be added after the first call.  Recomputing on each invocation keeps
+    // the list up to date and costs only a handful of vector copies.
     mRegistry = {};
     ::origin_mod::commands::OriginCommandRegistrar::instance().applyAll(mRegistry);
-    mRegistryBuilt = true;
+    mRegistryBuilt = true; // record that we've at least built once
 }
 
 static std::vector<std::string> collectSubcommandNames(::origin_mod::commands::OriginCommandRegistry const& reg) {
