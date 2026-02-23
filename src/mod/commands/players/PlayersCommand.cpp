@@ -79,6 +79,23 @@ void executePlayers(OriginMod& mod, const std::vector<std::string>& args) {
         }
         player.localSendMessage(fmt::format("§7Actor isPlayer(): {} 個", actorPlayerCount));
 
+        // Level情報を表示
+        auto level = ll::service::getLevel();
+        if (level) {
+            player.localSendMessage(fmt::format("§7Level: 有効, ClientSide: {}",
+                level->isClientSide() ? "Yes" : "No"));
+
+            // getRuntimeActorListのサイズを直接確認
+            try {
+                auto actors = level->getRuntimeActorList();
+                player.localSendMessage(fmt::format("§7RuntimeActorList: {} 個", actors.size()));
+            } catch (...) {
+                player.localSendMessage("§7RuntimeActorList: アクセスエラー");
+            }
+        } else {
+            player.localSendMessage("§cLevel: 無効");
+        }
+
     } else {
         // プレイヤー一覧を表示（引数なし、または不明な引数）
         auto playerNames = world.getPlayerNames();

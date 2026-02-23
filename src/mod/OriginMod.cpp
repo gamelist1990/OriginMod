@@ -1,7 +1,8 @@
 #include "mod/OriginMod.h"
 #include "mod/hooks/ChatHook.h"
 #include "mod/features/FeatureManager.h"
-#include "mod/util/DebugLogger.h"
+#include "mod/config/ConfigManager.h"
+#include "mod/config/MessageConfig.h"
 
 #include "ll/api/mod/RegisterHelper.h"
 
@@ -17,11 +18,7 @@ ll::mod::NativeMod& OriginMod::getSelf() const {
 }
 
 bool OriginMod::load() {
-    // Debugを有効にする
-    origin_mod::util::setDebugEnabled(true);
-
     getSelf().getLogger().info("OriginMod Loading...");
-
     return true;
 }
 
@@ -29,14 +26,22 @@ bool OriginMod::enable() {
     getSelf().getLogger().info("OriginMod Enabling...");
 
     try {
-        // フィーチャーマネージャを初期化
+        // 1. ConfigManagerを初期化
+        auto& configManager = config::ConfigManager::instance();
+        configManager.initialize(*this);
+
+        // 2. MessageConfigを初期化
+        auto& messageConfig = config::MessageConfig::instance();
+        messageConfig.initialize(*this);
+
+        // 3. フィーチャーマネージャを初期化
         auto& featureManager = features::FeatureManager::instance();
         featureManager.initialize(*this);
 
-        // チャットフックを初期化（コマンドシステムも含む）
+        // 4. チャットフックを初期化（コマンドシステムも含む）
         hooks::initializeChatHook(*this);
 
-        getSelf().getLogger().info("OriginMod successfully enabled!");
+        getSelf().getLogger().info("OriginMod successfully enabled! (World Event Architecture)");
         return true;
 
     } catch (const std::exception& e) {
@@ -49,14 +54,22 @@ bool OriginMod::disable() {
     getSelf().getLogger().info("OriginMod Disabling...");
 
     try {
-        // チャットフックを終了
+        // 1. チャットフックを終了
         hooks::shutdownChatHook();
 
-        // フィーチャーマネージャを終了
+        // 2. フィーチャーマネージャを終了
         auto& featureManager = features::FeatureManager::instance();
         featureManager.shutdown(*this);
 
-        getSelf().getLogger().info("OriginMod successfully disabled!");
+        // 3. MessageConfigを終了
+        auto& messageConfig = config::MessageConfig::instance();
+        messageConfig.shutdown();
+
+        // 4. ConfigManagerを終了
+        auto& configManager = config::ConfigManager::instance();
+        configManager.shutdown();
+
+        getSelf().getLogger().info("OriginMod successfully disabled! (World Event Architecture)");
         return true;
 
     } catch (const std::exception& e) {

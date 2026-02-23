@@ -3,6 +3,7 @@
 #include "mod/commands/toggle/ToggleCommand.h"
 #include "mod/commands/players/PlayersCommand.h"
 #include "mod/commands/test/TestCommand.h"
+#include "mod/commands/config/ConfigCommand.h"
 #include "mod/OriginMod.h"
 #include "mod/api/Player.h"
 #include <algorithm>
@@ -97,6 +98,15 @@ void CommandManager::initialize() {
     testCmd.maxArgs = 2;
     testCmd.handler = test::executeTest;
     registerCommand(testCmd);
+
+    // 設定コマンドを登録
+    Command configCmd;
+    configCmd.name = "config";
+    configCmd.description = "設定ファイルの管理とリロード";
+    configCmd.minArgs = 0;
+    configCmd.maxArgs = 3;
+    configCmd.handler = config::executeConfig;
+    registerCommand(configCmd);
 
     initialized_ = true;
 }

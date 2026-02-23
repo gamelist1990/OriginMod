@@ -1,0 +1,55 @@
+{
+  "killgg": {
+    "enabled": true,
+    "cooldown": 800,
+    "messages": [
+      "{}さんお疲れ～GG",
+      "{}さんナイスファイト！GG",
+      "{}さん乙！GG",
+      "{}さんGG～",
+      "{}さんおつでした！",
+      "{}さんありがと～GG",
+      "{}さんお疲れ様！GG",
+      "{}さんGood Game!",
+      "{}さんGGWP!",
+      "{}さんドンマイ！GG",
+      "{}さんお見事！GG",
+      "{}さん対戦ありがとうございました！",
+      "{}さんまたよろしく～GG",
+      "{}さんおつGG",
+      "{}さんファイト！GG",
+      "{}さんお疲れっした！GG",
+      "{}さん(｀・ω・´)b GG",
+      "{}さんいい勝負だった！GG",
+      "{}さんおつかれ～",
+      "{}さんGG ありがとう！"
+    ]
+  },
+  "autogg": {
+    "enabled": true,
+    "minDelay": 1000,
+    "maxDelay": 2000,
+    "messages": [
+      "gg",
+      "ggwp",
+      "Good game!",
+      "Well played!",
+      "gg wp",
+      "Good Game Well Played!",
+      "ナイスゲーム！",
+      "お疲れ様でした！",
+      "良い試合でした！",
+      "ggでした！",
+      "おつかれ！",
+      "ナイスファイト！",
+      "Good match!",
+      "wp gg",
+      "gg all",
+      "みなさんお疲れ様！",
+      "楽しかった！gg",
+      "また遊びましょう！",
+      "Great game everyone!",
+      "Thanks for the game!"
+    ]
+  }
+}

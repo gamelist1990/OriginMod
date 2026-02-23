@@ -10,7 +10,6 @@
 
 #include "mod/api/Player.h"
 #include "mod/api/Entity.h"
-#include "mod/api/PlayerAttackEntityEvent.h"
 
 // LeviLamina includes for Player access
 #include "ll/api/service/Bedrock.h"
@@ -23,13 +22,12 @@ class OriginMod;
 
 namespace origin_mod::api {
 
-// Very small signal/slot utility for event subscriptions.
+// Event signal utility (EventManagerから移動)
 template <class EventT>
 class EventSignal {
 public:
     using Handler = std::function<void(EventT&)>;
 
-    // Returns subscription id.
     uint64_t subscribe(Handler h) {
         if (!h) return 0;
         std::scoped_lock lk(mMutex);
@@ -45,7 +43,6 @@ public:
     }
 
     void emit(EventT& ev) {
-        // Copy handlers to avoid re-entrancy / modification issues.
         std::vector<Handler> hs;
         {
             std::scoped_lock lk(mMutex);
@@ -60,26 +57,26 @@ public:
     }
 
 private:
-    std::mutex                         mMutex;
-    uint64_t                           mNextId{0};
+    std::mutex mMutex;
+    uint64_t mNextId{0};
     std::unordered_map<uint64_t, Handler> mHandlers;
 };
 
+// イベント構造体の定義
 struct ChatSendEvent {
     std::string message;
     origin_mod::api::Player sender;
     bool cancel{false};
 
     ChatSendEvent(std::string msg, origin_mod::OriginMod& mod)
-    : message(std::move(msg)),
-      sender(mod) {}
+    : message(std::move(msg)), sender(mod) {}
 };
 
 struct TickEvent {
     uint64_t tick{0};
 };
 
-struct PlayerAttackEntityEventData {
+struct PlayerAttackEventData {
     std::string attackerName;
     std::string targetName;
     std::string targetType;
@@ -87,6 +84,27 @@ struct PlayerAttackEntityEventData {
     bool wasCritical;
     double distance;
     bool targetIsPlayer;
+
+    // 位置情報
+    double attackerX, attackerY, attackerZ;
+    double targetX, targetY, targetZ;
+};
+
+struct GameStateEventData {
+    enum class Type {
+        GameStart, GameEnd, Victory, Defeat,
+        RoundStart, RoundEnd, PlayerJoin, PlayerLeave,
+        Kill, Death, Custom
+    };
+
+    Type type;
+    std::string message;
+    std::string playerName;
+    std::string targetName;
+    std::string details;
+
+    GameStateEventData(Type t, std::string msg = "", std::string player = "", std::string target = "")
+    : type(t), message(std::move(msg)), playerName(std::move(player)), targetName(std::move(target)) {}
 };
 
 struct PacketReceiveEvent {
@@ -96,15 +114,17 @@ struct PacketReceiveEvent {
     bool cancel{false};
 
     PacketReceiveEvent(std::string type, std::string msg, std::string sender = "")
-    : packetType(std::move(type)),
-      message(std::move(msg)),
-      senderName(std::move(sender)) {}
+    : packetType(std::move(type)), message(std::move(msg)), senderName(std::move(sender)) {}
 };
 
+/**
+ * World API - ワールド状態アクセス + 統合イベントシステム
+ */
 class World {
 public:
     static World& instance();
 
+    // イベント構造体
     struct BeforeEvents {
         EventSignal<ChatSendEvent> chatSend;
         EventSignal<PacketReceiveEvent> packetReceive;
@@ -112,58 +132,83 @@ public:
 
     struct AfterEvents {
         EventSignal<TickEvent> tick;
-        EventSignal<PlayerAttackEntityEventData> playerAttack;
+        EventSignal<PlayerAttackEventData> playerAttack;
+        EventSignal<GameStateEventData> gameState;
     };
 
+    // イベントアクセス (従来のMinecraft風)
     [[nodiscard]] BeforeEvents& beforeEvents() noexcept { return mBefore; }
     [[nodiscard]] AfterEvents& afterEvents() noexcept { return mAfter; }
 
-    // Internal: emitters used by modules.
+    // イベント発行メソッド (内部使用)
     void emitChatSend(ChatSendEvent& ev) { mBefore.chatSend.emit(ev); }
     void emitPacketReceive(PacketReceiveEvent& ev) { mBefore.packetReceive.emit(ev); }
-    void emitTick(TickEvent& ev) { mAfter.tick.emit(ev); }
-    void emitPlayerAttack(PlayerAttackEntityEventData& ev) { mAfter.playerAttack.emit(ev); }
+    void emitTick(TickEvent& ev) { ev.tick = ++mCurrentTick; mAfter.tick.emit(ev); }
+    void emitPlayerAttack(PlayerAttackEventData& ev) { mAfter.playerAttack.emit(ev); }
+    void emitGameState(GameStateEventData& ev) { mAfter.gameState.emit(ev); }
 
-    // Public methods called by ChatHook
-    void onPlayerChat(const std::string& playerName, const std::string& message, origin_mod::OriginMod& mod);
-    void onReceiveChat(const std::string& message, origin_mod::OriginMod& mod);
-    void onPacketReceive(const std::string& packetType, const std::string& message, const std::string& sender, origin_mod::OriginMod& mod);
-    void onTick();
-
-    // Player list utility
+    /**
+     * プレイヤー名の一覧を取得
+     */
     std::vector<std::string> getPlayerNames() const;
 
-    // Player objects utility (ユーザー提案)
+    /**
+     * プレイヤーオブジェクトの一覧を取得
+     */
     std::vector<origin_mod::api::Player> getPlayers(origin_mod::OriginMod& mod) const;
 
-    // Entity objects utility (全エンティティ取得)
+    /**
+     * 全エンティティオブジェクトの一覧を取得
+     */
     std::vector<origin_mod::api::Entity> getEntities(origin_mod::OriginMod& mod) const;
 
+    /**
+     * レベルにアクセスしてプレイヤーを反復処理
+     */
     template<typename Func>
     void forEachPlayer(Func&& func) const {
         try {
-            auto level = ll::service::getLevel();
-            if (!level) {
-                return;
-            }
+            // Florial方式: clientInstance->getLocalPlayer()->getLevel()
+            auto clientInstance = ll::service::bedrock::getClientInstance();
+            if (!clientInstance) return;
 
-            // forEachPlayerを使ってPlayer型オブジェクトにアクセス
-            level->forEachPlayer(std::function<bool(::Player&)>([&func](::Player& player) -> bool {
-                func(player);
-                return true; // 継続
-            }));
+            ::LocalPlayer* localPlayer = clientInstance->getLocalPlayer();
+            if (!localPlayer) return;
+
+            ::Level* level = &localPlayer->getLevel();
+            if (!level) return;
+
+            // RuntimeActorListから取得
+            auto actors = level->getRuntimeActorList();
+            for (auto* actor : actors) {
+                if (actor && actor->isPlayer()) {
+                    auto* player = static_cast<::Player*>(actor);
+                    func(*player);
+                }
+            }
 
         } catch (const std::exception&) {
             // エラー時は何もしない
         }
     }
 
+    // ゲーム状態検出ヘルパーメソッド
+    static bool isKillMessage(const std::string& message);
+    static bool isGameEndMessage(const std::string& message);
+    static std::string removeColorCodes(const std::string& text);
+
+    // Backward compatibility
+    void onPlayerChat(const std::string& playerName, const std::string& message, origin_mod::OriginMod& mod);
+    void onReceiveChat(const std::string& message, origin_mod::OriginMod& mod);
+    void onPacketReceive(const std::string& packetType, const std::string& message, const std::string& sender, origin_mod::OriginMod& mod);
+    void onTick();
+
 private:
     World() = default;
 
     BeforeEvents mBefore;
-    AfterEvents  mAfter;
-    uint64_t     mCurrentTick{0};
+    AfterEvents mAfter;
+    uint64_t mCurrentTick{0};
 };
 
 } // namespace origin_mod::api
