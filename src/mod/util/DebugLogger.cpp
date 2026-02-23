@@ -10,6 +10,15 @@ namespace {
 std::mutex g_mutex;
 std::ofstream g_debugFile;
 
+// runtime switch; default depends on build configuration
+bool g_enabled
+#ifndef NDEBUG
+    = true;
+#else
+    = false;
+#endif
+;
+
 void ensureOpened() {
     if (g_debugFile.is_open()) {
         return;
@@ -33,17 +42,27 @@ void ensureOpened() {
 }
 } // namespace
 
+void setDebugEnabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    g_enabled = enabled;
+}
+
+bool isDebugEnabled() {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    return g_enabled;
+}
+
 void debugLog(std::string_view msg) {
-#ifndef NDEBUG
+    if (!isDebugEnabled()) {
+        return;
+    }
+
     std::lock_guard<std::mutex> lock(g_mutex);
     ensureOpened();
     if (g_debugFile.is_open()) {
         g_debugFile << msg << '\n';
         g_debugFile.flush();
     }
-#else
-    (void)msg;
-#endif
 }
 
 } // namespace origin_mod::util

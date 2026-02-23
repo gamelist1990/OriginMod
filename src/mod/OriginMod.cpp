@@ -1,4 +1,5 @@
 #include "mod/OriginMod.h"
+#include "mod/util/DebugLogger.h"
 
 #include <utility>
 
@@ -14,6 +15,11 @@ OriginMod& OriginMod::getInstance() {
 }
 
 bool OriginMod::load() {
+    // always enable our debug logger at runtime; the build-time guard now only
+    // controls the default value.  this lets us write debug.txt even when the
+    // DLL was compiled in release mode.
+    origin_mod::util::setDebugEnabled(true);
+
     getSelf().getLogger().debug("Loading...");
 
     return loadModules();
