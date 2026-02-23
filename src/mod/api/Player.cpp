@@ -1,6 +1,7 @@
 #include "mod/api/Player.h"
 
 #include "mod/OriginMod.h"
+#include "mod/util/DebugLogger.h"
 
 #include "ll/api/service/Bedrock.h"
 
@@ -65,22 +66,27 @@ void Player::sendMessage(std::string_view msg) const {
 }
 
 void Player::localSendMessage(std::string_view msg) const {
-    // Local-only message (HUD).
+    origin_mod::util::debugLog("localSendMessage: " + std::string(msg));
     auto ciOpt = ll::service::bedrock::getClientInstance();
+    origin_mod::util::debugLog(std::string("getClientInstance returned ") + (ciOpt ? "non-null" : "null"));
     if (ciOpt) {
         try {
-            auto gui = ciOpt->getGuiData();
-            if (gui.get()) {
-                // Fixed: displayClientMessage requires 3 arguments in LeviLamina 1.9.5
-                gui->displayClientMessage(std::string{msg}, std::nullopt, false);
+            if (auto *lp = ciOpt->getLocalPlayer()) {
+                origin_mod::util::debugLog("got LocalPlayer pointer");
+                lp->displayClientMessage(std::string{msg}, std::nullopt);
                 return;
+            } else {
+                origin_mod::util::debugLog("getLocalPlayer returned null");
             }
         } catch (...) {
+            origin_mod::util::debugLog("exception while calling getLocalPlayer/displayClientMessage");
+            // ignored, fall through to logger below
         }
     }
 
-    // Fallback: log.
-    mMod.getSelf().getLogger().info("{}", msg);
+    // Fallback: log so the player can still see something in the console.
+    auto &logger = mMod.getSelf().getLogger();
+    logger.warn("localSendMessage failed, dropping message: {}", msg);
 }
 
 } // namespace origin_mod::api
