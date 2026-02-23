@@ -5,8 +5,10 @@
 #include <fmt/format.h>
 
 #include "mod/OriginMod.h"
+#include "mod/api/Entity.h"
 #include "mod/api/Player.h"
 #include "mod/api/World.h"
+#include "mod/events/DamageTracker.h"
 #include "mod/features/FeatureRegistrar.h"
 #include "mod/features/FeatureRegistry.h"
 #include "mod/features/IFeature.h"
@@ -93,6 +95,35 @@ private:
             auto& target = event.target();
             auto& player = event.self();
 
+            // ダメージ/クリティカル推定
+            // - 可能なら ActorHurtEvent で取れた「直近ダメージ」を利用
+            // - 取れない環境ではフォールバックで 1.0
+            float estimatedDamage = 1.0f;
+            bool estimatedCritical = false;
+
+            const int64_t playerUid = origin_mod::events::DamageTracker::tryGetUid(player);
+            const int64_t targetUid = origin_mod::events::DamageTracker::tryGetUid(target);
+            if (targetUid != 0) {
+                auto rec = origin_mod::events::DamageTracker::instance().getRecentDamage(
+                    targetUid,
+                    std::chrono::milliseconds(400),
+                    playerUid
+                );
+                if (rec.has_value() && rec->damage > 0.0f) {
+                    estimatedDamage = rec->damage;
+                    estimatedCritical = rec->wasCritical;
+                }
+            }
+
+            // クリティカルは PlayerAttackEvent から確定できないので簡易推定のみ
+            // （落下中で地面についていない等）
+            try {
+                if (!player.isOnGround() && player.getFallDistance() > 0.0f && !player.isInWater() && !player.isInLava()) {
+                    estimatedCritical = true;
+                }
+            } catch (...) {
+            }
+
             // 攻撃データを作成
             api::PlayerAttackEventData attackData{};
             attackData.attackerName = player.getRealName();
@@ -120,8 +151,20 @@ private:
             attackData.distance = std::sqrt(dx*dx + dy*dy + dz*dz);
 
             // ダメージ情報（LeviLamina PlayerAttackEventには直接の情報がない）
-            attackData.damage = 0.0;
-            attackData.wasCritical = false;
+            attackData.damage = estimatedDamage;
+            attackData.wasCritical = estimatedCritical;
+
+            // HP情報を取得
+            try {
+                // Remote Actor の getHealth() はクライアント側で固定値になることがあるため、Entityラッパー経由で取得
+                api::Entity ent(&target, mod);
+                attackData.targetCurrentHP = static_cast<float>(ent.getHealth());
+                attackData.targetMaxHP = static_cast<float>(target.getMaxHealth());
+            } catch (...) {
+                // HP取得に失敗した場合はデフォルト値(-1)
+                attackData.targetCurrentHP = -1.0f;
+                attackData.targetMaxHP = -1.0f;
+            }
 
             // Worldにイベントを発行
             auto& world = api::World::instance();
@@ -139,17 +182,28 @@ private:
         if (!mEnabled || !mPlayer) return;
 
         try {
-            // シンプルなUI表示
+            // HP情報の文字列を作成
+            std::string hpInfo;
+            if (attackData.targetCurrentHP >= 0.0f && attackData.targetMaxHP > 0.0f) {
+                hpInfo = fmt::format("§c♥{:.1f}/{:.1f}", attackData.targetCurrentHP, attackData.targetMaxHP);
+            } else {
+                hpInfo = "§c♥HP不明";
+            }
+
+            // UI表示
             std::string message = fmt::format(
-                "§e[Attack] §fTarget: {} §c♥HP情報取得中... §f({:.0f}m) {}",
+                "§e[Attack] §fTarget: {} {} §f({:.0f}m) {} §7DMG:{:.1f}{}",
                 attackData.targetName,
+                hpInfo,
                 attackData.distance,
-                attackData.targetIsPlayer ? "§b[Player]" : ""
+                attackData.targetIsPlayer ? "§b[Player]" : "",
+                attackData.damage,
+                attackData.wasCritical ? " §6CRIT" : ""
             );
 
             mPlayer->localSendMessage(message);
 
-        } catch (const std::exception& e) {
+        } catch (const std::exception&) {
             // エラー時はログ出力のみ
         } catch (...) {
             // 無視

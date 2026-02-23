@@ -208,7 +208,6 @@ int Player::getHealth() const {
     if (!lp) return -1;
 
     try {
-        // Actor::getHealth() 
         return lp->getHealth();
     } catch (...) {
         mMod.getSelf().getLogger().debug("Failed to get player health");

@@ -166,6 +166,11 @@ void World::onTick() {
     emitTick(tickEvent);
 }
 
+void World::onItemUse(const std::string& playerName, const std::string& itemName, const std::string& itemType, origin_mod::OriginMod& mod) {
+    ItemUseEvent itemEvent(playerName, itemName, itemType);
+    emitItemUse(itemEvent);
+}
+
 // ゲーム状態検出ヘルパーメソッド
 bool World::isKillMessage(const std::string& message) {
     std::string cleanMessage = removeColorCodes(message);

@@ -74,6 +74,21 @@ struct ChatSendEvent {
     : message(std::move(msg)), sender(mod) {}
 };
 
+struct ItemUseEvent {
+    std::string playerName;
+    std::string itemName;
+    std::string itemType;
+    int itemId{0};
+    int itemCount{1};
+    bool cancel{false};
+
+    // 使用位置情報
+    double posX{0.0}, posY{0.0}, posZ{0.0};
+
+    ItemUseEvent(std::string player, std::string item, std::string type = "")
+    : playerName(std::move(player)), itemName(std::move(item)), itemType(std::move(type)) {}
+};
+
 struct TickEvent {
     uint64_t tick{0};
 };
@@ -86,6 +101,10 @@ struct PlayerAttackEventData {
     bool wasCritical;
     double distance;
     bool targetIsPlayer;
+
+    // HP情報
+    float targetCurrentHP{-1.0f};
+    float targetMaxHP{-1.0f};
 
     // 位置情報
     double attackerX, attackerY, attackerZ;
@@ -130,6 +149,7 @@ public:
     struct BeforeEvents {
         EventSignal<ChatSendEvent> chatSend;
         EventSignal<PacketReceiveEvent> packetReceive;
+        EventSignal<ItemUseEvent> itemUse;
     };
 
     struct AfterEvents {
@@ -145,6 +165,7 @@ public:
     // イベント発行メソッド (内部使用)
     void emitChatSend(ChatSendEvent& ev) { mBefore.chatSend.emit(ev); }
     void emitPacketReceive(PacketReceiveEvent& ev) { mBefore.packetReceive.emit(ev); }
+    void emitItemUse(ItemUseEvent& ev) { mBefore.itemUse.emit(ev); }
     void emitTick(TickEvent& ev) { ev.tick = ++mCurrentTick; mAfter.tick.emit(ev); }
     void emitPlayerAttack(PlayerAttackEventData& ev) { mAfter.playerAttack.emit(ev); }
     void emitGameState(GameStateEventData& ev) { mAfter.gameState.emit(ev); }
@@ -204,6 +225,7 @@ public:
     void onReceiveChat(const std::string& message, origin_mod::OriginMod& mod);
     void onPacketReceive(const std::string& packetType, const std::string& message, const std::string& sender, origin_mod::OriginMod& mod);
     void onTick();
+    void onItemUse(const std::string& playerName, const std::string& itemName, const std::string& itemType, origin_mod::OriginMod& mod);
 
 private:
     World() = default;

@@ -2,7 +2,6 @@
 #include "mod/commands/help/HelpCommand.h"
 #include "mod/commands/toggle/ToggleCommand.h"
 #include "mod/commands/players/PlayersCommand.h"
-#include "mod/commands/test/TestCommand.h"
 #include "mod/commands/config/ConfigCommand.h"
 #include "mod/OriginMod.h"
 #include "mod/api/Player.h"
@@ -89,15 +88,6 @@ void CommandManager::initialize() {
     playersCmd.maxArgs = 3;  // players location, players entities, players debug に対応
     playersCmd.handler = players::executePlayers;
     registerCommand(playersCmd);
-
-    // テストコマンドを登録
-    Command testCmd;
-    testCmd.name = "test";
-    testCmd.description = "テスト機能とイベントのデバッグ";
-    testCmd.minArgs = 0;
-    testCmd.maxArgs = 2;
-    testCmd.handler = test::executeTest;
-    registerCommand(testCmd);
 
     // 設定コマンドを登録
     Command configCmd;

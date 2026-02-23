@@ -95,7 +95,6 @@ void executePlayers(OriginMod& mod, const std::vector<std::string>& args) {
         } else {
             player.localSendMessage("§cLevel: 無効");
         }
-
     } else {
         // プレイヤー一覧を表示（引数なし、または不明な引数）
         auto playerNames = world.getPlayerNames();

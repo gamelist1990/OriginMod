@@ -10,6 +10,7 @@
 #include "ll/api/event/world/LevelTickEvent.h"
 
 #include "mod/OriginMod.h"
+#include "mod/config/ConfigManager.h"
 #include "mod/features/FeatureRegistrar.h"
 #include "mod/features/FeatureRegistry.h"
 #include "mod/features/IFeature.h"
@@ -160,30 +161,24 @@ void FeatureManager::loadAllFeatures() {
 void FeatureManager::loadConfig(origin_mod::OriginMod& mod) {
     mEnabled.clear();
 
-    auto path = configPath(mod);
-    if (!std::filesystem::exists(path)) {
+    // ConfigManagerを使用して設定を読み込み
+    auto& configManager = origin_mod::config::ConfigManager::instance();
+    auto configOpt = configManager.loadConfig("features.json");
+
+    if (!configOpt.has_value()) {
         return;
     }
 
-    std::ifstream ifs(path);
-    if (!ifs) {
-        return;
-    }
-    json j;
-    try {
-        ifs >> j;
-    } catch (...) {
-        mod.getSelf().getLogger().warn("Failed to parse feature config: {}", path.string());
+    json config = configOpt.value();
+    if (!config.is_object()) {
         return;
     }
 
-    if (!j.is_object()) {
+    auto it = config.find("features");
+    if (it == config.end() || !it->is_object()) {
         return;
     }
-    auto it = j.find("features");
-    if (it == j.end() || !it->is_object()) {
-        return;
-    }
+
     for (auto const& [k, v] : it->items()) {
         if (v.is_boolean()) {
             mEnabled[toLower(k)] = v.get<bool>();
@@ -192,20 +187,15 @@ void FeatureManager::loadConfig(origin_mod::OriginMod& mod) {
 }
 
 void FeatureManager::saveConfig(origin_mod::OriginMod& mod) const {
-    auto path = configPath(mod);
-    std::filesystem::create_directories(path.parent_path());
-
+    // ConfigManagerを使用して設定を保存
     json j;
     j["features"] = json::object();
     for (auto const& [k, v] : mEnabled) {
         j["features"][k] = v;
     }
 
-    std::ofstream ofs(path);
-    if (!ofs) {
-        return;
-    }
-    ofs << j.dump(2);
+    auto& configManager = origin_mod::config::ConfigManager::instance();
+    configManager.saveConfig("features.json", j);
 }
 
 void FeatureManager::applyEnabledStates(origin_mod::OriginMod& mod) {
@@ -235,8 +225,29 @@ void FeatureManager::onTick(origin_mod::OriginMod& mod) {
     }
 }
 
-std::filesystem::path FeatureManager::configPath(origin_mod::OriginMod& mod) const {
-    return mod.getSelf().getConfigDir() / "features.json";
+void FeatureManager::reloadConfig(origin_mod::OriginMod& mod) {
+    if (!mInitialized) {
+        return;
+    }
+
+    // 現在の状態を保存してからリロード
+    auto oldStates = mEnabled;
+    loadConfig(mod);
+
+    // 変更された機能の状態を適用
+    for (auto& f : mFeatures) {
+        auto id = toLower(f->id());
+        bool oldEnabled = oldStates.contains(id) ? oldStates[id] : false;
+        bool newEnabled = mEnabled.contains(id) ? mEnabled[id] : false;
+
+        if (oldEnabled != newEnabled) {
+            if (newEnabled) {
+                f->onEnable(mod);
+            } else {
+                f->onDisable(mod);
+            }
+        }
+    }
 }
 
 std::vector<std::string> FeatureManager::featureIds() const {

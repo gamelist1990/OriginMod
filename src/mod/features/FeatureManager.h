@@ -45,6 +45,9 @@ public:
     // Returns all feature IDs as strings (for command soft-enum registration).
     [[nodiscard]] std::vector<std::string> featureIds() const;
 
+    // Reload feature configuration from ConfigManager
+    void reloadConfig(origin_mod::OriginMod& mod);
+
 private:
     FeatureManager() = default;
 
@@ -57,8 +60,6 @@ private:
     void applyEnabledStates(origin_mod::OriginMod& mod);
 
     void onTick(origin_mod::OriginMod& mod);
-
-    [[nodiscard]] std::filesystem::path configPath(origin_mod::OriginMod& mod) const;
 
     bool mInitialized{false};
 

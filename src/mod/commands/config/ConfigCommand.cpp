@@ -2,6 +2,7 @@
 #include "mod/api/Player.h"
 #include "mod/config/ConfigManager.h"
 #include "mod/config/MessageConfig.h"
+#include "mod/features/FeatureManager.h"
 #include "mod/OriginMod.h"
 
 #include <fmt/format.h>
@@ -22,6 +23,10 @@ void executeConfig(OriginMod& mod, const std::vector<std::string>& args) {
                 auto& messageConfig = origin_mod::config::MessageConfig::instance();
                 messageConfig.reloadConfig();
                 player.localSendMessage("§amessages.json をリロードしました");
+            } else if (fileName == "features" || fileName == "features.json") {
+                auto& featureManager = origin_mod::features::FeatureManager::instance();
+                featureManager.reloadConfig(mod);
+                player.localSendMessage("§afeatures.json をリロードしました");
             } else {
                 configManager.reloadConfig(fileName);
                 player.localSendMessage(fmt::format("§a{} をリロードしました", fileName));
@@ -30,9 +35,11 @@ void executeConfig(OriginMod& mod, const std::vector<std::string>& args) {
             // 全設定ファイルのリロード
             auto& configManager = origin_mod::config::ConfigManager::instance();
             auto& messageConfig = origin_mod::config::MessageConfig::instance();
+            auto& featureManager = origin_mod::features::FeatureManager::instance();
 
             configManager.reloadAllConfigs();
             messageConfig.reloadConfig();
+            featureManager.reloadConfig(mod);
 
             player.localSendMessage("§a全ての設定ファイルをリロードしました");
         }
@@ -41,12 +48,15 @@ void executeConfig(OriginMod& mod, const std::vector<std::string>& args) {
         // 設定システムの状態表示
         auto& configManager = origin_mod::config::ConfigManager::instance();
         auto& messageConfig = origin_mod::config::MessageConfig::instance();
+        auto& featureManager = origin_mod::features::FeatureManager::instance();
 
         player.localSendMessage("=== 設定システム状態 ===");
         player.localSendMessage(fmt::format("§7ConfigManager: {}",
             configManager.isInitialized() ? "初期化済み" : "未初期化"));
         player.localSendMessage(fmt::format("§7MessageConfig: {}",
             messageConfig.isInitialized() ? "初期化済み" : "未初期化"));
+        player.localSendMessage(fmt::format("§7FeatureManager: {}",
+            featureManager.isInitialized() ? "初期化済み" : "未初期化"));
 
         const auto& killggConfig = messageConfig.getKillGGConfig();
         const auto& autoggConfig = messageConfig.getAutoGGConfig();
@@ -97,6 +107,7 @@ void executeConfig(OriginMod& mod, const std::vector<std::string>& args) {
         player.localSendMessage("§7");
         player.localSendMessage("§7利用可能なファイル:");
         player.localSendMessage("§7  messages.json - KillGG/AutoGGメッセージ設定");
+        player.localSendMessage("§7  features.json - 機能の有効/無効設定");
     }
 }
 

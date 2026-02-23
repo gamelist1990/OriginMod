@@ -3,6 +3,7 @@
 #include "mod/commands/CommandManager.h"
 #include "mod/api/Player.h"
 #include "mod/api/World.h"
+#include "mod/events/DamageTracker.h"
 #include <fmt/format.h>
 #include <sstream>
 
@@ -20,6 +21,8 @@
 #include "mc/network/LoopbackPacketSender.h"
 #include "mc/network/NetworkIdentifier.h"
 #include "mc/network/packet/TextPacketType.h"
+#include "mc/network/packet/ActorEventPacket.h"
+#include "mc/world/actor/ActorEvent.h"
 
 namespace origin_mod::hooks {
 
@@ -118,6 +121,30 @@ LL_TYPE_INSTANCE_HOOK(
     }
 }
 
+// ClientNetworkHandler::$handle ActorEventPacketフック（受信処理）
+LL_TYPE_INSTANCE_HOOK(
+    ClientNetworkHandlerActorEventPacketHook,
+    ll::memory::HookPriority::Highest,
+    ClientNetworkHandler,
+    &ClientNetworkHandler::$handle,
+    void,
+    ::NetworkIdentifier const& source,
+    ::ActorEventPacket const& packet
+) {
+    origin(source, packet);
+
+    try {
+        // HURT/DEATH を推定HP制御に使う
+        if (packet.mEventId == ::ActorEvent::Hurt) {
+            origin_mod::events::DamageTracker::instance().onActorEventPacketHurt(packet.mRuntimeId);
+        } else if (packet.mEventId == ::ActorEvent::Death || packet.mEventId == ::ActorEvent::InstantDeath) {
+            origin_mod::events::DamageTracker::instance().onActorEventPacketDeath(packet.mRuntimeId);
+        }
+    } catch (...) {
+        // ignore
+    }
+}
+
 void initializeChatHook(OriginMod& mod) {
     mod.getSelf().getLogger().debug("Initializing pure packet-based chat hook (LeviLamina 1.9.5)...");
 
@@ -138,6 +165,14 @@ void initializeChatHook(OriginMod& mod) {
         mod.getSelf().getLogger().info("ClientNetworkHandler::$handle TextPacket hook registered successfully");
     } catch (const std::exception& e) {
         mod.getSelf().getLogger().error("Failed to register ClientNetworkHandler TextPacket hook: {}", e.what());
+    }
+
+    // ActorEventPacketフックを有効化（受信側）
+    try {
+        ClientNetworkHandlerActorEventPacketHook::hook();
+        mod.getSelf().getLogger().info("ClientNetworkHandler::$handle ActorEventPacket hook registered successfully");
+    } catch (const std::exception& e) {
+        mod.getSelf().getLogger().error("Failed to register ClientNetworkHandler ActorEventPacket hook: {}", e.what());
     }
 
     // パケット送信フックを有効化（送信側 - フラリアル方式）
