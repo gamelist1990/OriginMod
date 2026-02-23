@@ -3,6 +3,7 @@
 #include "mod/commands/toggle/ToggleCommand.h"
 #include "mod/commands/players/PlayersCommand.h"
 #include "mod/commands/config/ConfigCommand.h"
+#include "mod/commands/ping/PingCommand.h"
 #include "mod/OriginMod.h"
 #include "mod/api/Player.h"
 #include <algorithm>
@@ -97,6 +98,15 @@ void CommandManager::initialize() {
     configCmd.maxArgs = 3;
     configCmd.handler = config::executeConfig;
     registerCommand(configCmd);
+
+    // Pingコマンドを登録
+    Command pingCmd;
+    pingCmd.name = "ping";
+    pingCmd.description = "ping と server ip を表示します";
+    pingCmd.minArgs = 0;
+    pingCmd.maxArgs = 0;
+    pingCmd.handler = ping::executePing;
+    registerCommand(pingCmd);
 
     initialized_ = true;
 }

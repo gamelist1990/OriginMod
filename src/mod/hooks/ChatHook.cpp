@@ -1,6 +1,7 @@
 #include "mod/hooks/ChatHook.h"
 #include "mod/OriginMod.h"
 #include "mod/commands/CommandManager.h"
+#include "mod/api/NetworkInfo.h"
 #include "mod/api/Player.h"
 #include "mod/api/World.h"
 #include <fmt/format.h>
@@ -88,6 +89,15 @@ LL_TYPE_INSTANCE_HOOK(
     auto* mod = gChatHookMod.load(std::memory_order_relaxed);
     if (mod) {
         try {
+            // Best-effort: cache server endpoint for -ping command.
+            try {
+                auto ipPort = source.getIPAndPort();
+                if (!ipPort.empty()) {
+                    origin_mod::api::NetworkInfo::setServerIpPort(ipPort);
+                }
+            } catch (...) {
+            }
+
             // パケット処理とコマンド実行
             std::string message = packet.getMessage();
             std::string author = packet.getAuthorOrEmpty();
