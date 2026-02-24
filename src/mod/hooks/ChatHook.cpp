@@ -1,7 +1,6 @@
 #include "mod/hooks/ChatHook.h"
 #include "mod/OriginMod.h"
 #include "mod/commands/CommandManager.h"
-#include "mod/api/NetworkInfo.h"
 #include "mod/api/Player.h"
 #include "mod/api/World.h"
 #include <fmt/format.h>
@@ -31,7 +30,7 @@ static std::atomic<OriginMod*> gChatHookMod{nullptr};
 // LoopbackPacketSender::$sendToServer フック（送信処理 - フラリアル方式）
 LL_TYPE_INSTANCE_HOOK(
     LoopbackPacketSenderHook,
-    ll::memory::HookPriority::Highest,
+    ll::memory::HookPriority::Normal,
     LoopbackPacketSender,
     &LoopbackPacketSender::$sendToServer,
     void,
@@ -77,7 +76,7 @@ LL_TYPE_INSTANCE_HOOK(
 // ClientNetworkHandler::$handle TextPacketフック（受信処理）
 LL_TYPE_INSTANCE_HOOK(
     ClientNetworkHandlerTextPacketHook,
-    ll::memory::HookPriority::Highest,
+    ll::memory::HookPriority::Normal,
     ClientNetworkHandler,
     &ClientNetworkHandler::$handle,
     void,
@@ -89,15 +88,6 @@ LL_TYPE_INSTANCE_HOOK(
     auto* mod = gChatHookMod.load(std::memory_order_relaxed);
     if (mod) {
         try {
-            // Best-effort: cache server endpoint for -ping command.
-            try {
-                auto ipPort = source.getIPAndPort();
-                if (!ipPort.empty()) {
-                    origin_mod::api::NetworkInfo::setServerIpPort(ipPort);
-                }
-            } catch (...) {
-            }
-
             // パケット処理とコマンド実行
             std::string message = packet.getMessage();
             std::string author = packet.getAuthorOrEmpty();

@@ -22,3 +22,7 @@ target("OriginMod") -- Change this to your mod name.
     add_headerfiles("src/**.h")
     add_files("src/**.cpp")
     add_includedirs("src")
+
+    if is_plat("windows") then
+        add_syslinks("iphlpapi", "ws2_32")
+    end

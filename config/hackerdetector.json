@@ -1,0 +1,12 @@
+{
+  "messages": "client",
+  "immobileCheck": false,
+  "speedCheck": true,
+  "derpCheck": true,
+  "flyCheck": false,
+
+  "strictness": 2,
+
+  "cooldownMs": 1200,
+  "minFailsToReport": 2
+}

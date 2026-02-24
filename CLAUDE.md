@@ -7,6 +7,7 @@
 	"C:\Users\PC_User\AppData\Local\.xmake\packages\l\levilamina\1.9.5"
 
 	"C:\Users\PC_User\AppData\Local\.xmake\packages\l\levilamina\1.9.5\59918f9a538b4d4d8cfaf00185a305de" is Client ライブラリ
+	一応レポジトリ内にも "Library/levilamina" として参照用に置いてあるけど、実際の開発では正しいパスを使用。
 	"C:\Users\PC_User\AppData\Local\.xmake\packages\l\levilamina\1.9.5\c57883566cf3486cb5d8749f2ccf13d1" is Server ライブラリ (このModでは使用しない)
 
 バージョン

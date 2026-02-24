@@ -38,7 +38,7 @@ bool OriginMod::enable() {
         auto& featureManager = features::FeatureManager::instance();
         featureManager.initialize(*this);
 
-        // 4. チャットフックを初期化（コマンドシステムも含む）
+        // 5. チャットフックを初期化（コマンドシステムも含む）
         hooks::initializeChatHook(*this);
 
         getSelf().getLogger().info("OriginMod successfully enabled! (World Event Architecture)");
@@ -54,18 +54,18 @@ bool OriginMod::disable() {
     getSelf().getLogger().info("OriginMod Disabling...");
 
     try {
-        // 1. チャットフックを終了
+        // 2. チャットフックを終了
         hooks::shutdownChatHook();
 
-        // 2. フィーチャーマネージャを終了
+        // 3. フィーチャーマネージャを終了
         auto& featureManager = features::FeatureManager::instance();
         featureManager.shutdown(*this);
 
-        // 3. MessageConfigを終了
+        // 4. MessageConfigを終了
         auto& messageConfig = config::MessageConfig::instance();
         messageConfig.shutdown();
 
-        // 4. ConfigManagerを終了
+        // 5. ConfigManagerを終了
         auto& configManager = config::ConfigManager::instance();
         configManager.shutdown();
 

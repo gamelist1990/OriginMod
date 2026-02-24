@@ -4,6 +4,7 @@
 #include "mod/commands/players/PlayersCommand.h"
 #include "mod/commands/config/ConfigCommand.h"
 #include "mod/commands/ping/PingCommand.h"
+#include "mod/commands/top/TopCommand.h"
 #include "mod/OriginMod.h"
 #include "mod/api/Player.h"
 #include <algorithm>
@@ -104,9 +105,18 @@ void CommandManager::initialize() {
     pingCmd.name = "ping";
     pingCmd.description = "ping と server ip を表示します";
     pingCmd.minArgs = 0;
-    pingCmd.maxArgs = 0;
+    pingCmd.maxArgs = 1;
     pingCmd.handler = ping::executePing;
     registerCommand(pingCmd);
+
+    // Topコマンドを登録
+    Command topCmd;
+    topCmd.name = "top";
+    topCmd.description = "プレイヤーの上空の安全な場所にテレポートします";
+    topCmd.minArgs = 0;
+    topCmd.maxArgs = 0;
+    topCmd.handler = top::executeTop;
+    registerCommand(topCmd);
 
     initialized_ = true;
 }
