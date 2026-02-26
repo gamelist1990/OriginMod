@@ -25,14 +25,7 @@ public:
     void initialize(origin_mod::OriginMod& mod);
     void shutdown();
 
-    /**
-     * KillGG設定
-     */
-    struct KillGGConfig {
-        bool enabled{true};
-        std::vector<std::string> messages;
-        int cooldown{800}; // ミリ秒
-    };
+    // KillGG機能は削除済み
 
     /**
      * AutoGG設定
@@ -44,13 +37,24 @@ public:
         int maxDelay{2000}; // ミリ秒
     };
 
+    /**
+     * Top Killer Taunt設定
+     */
+    struct TopKillerTauntConfig {
+        bool enabled{true};
+        std::vector<std::string> messages;
+        int cooldown{3000}; // ミリ秒
+    };
+
     // 設定取得メソッド
-    [[nodiscard]] const KillGGConfig& getKillGGConfig() const { return mKillGGConfig; }
+    // getKillGGConfig() 削除済み
     [[nodiscard]] const AutoGGConfig& getAutoGGConfig() const { return mAutoGGConfig; }
+    [[nodiscard]] const TopKillerTauntConfig& getTopKillerTauntConfig() const { return mTopKillerTauntConfig; }
 
     // ランダムメッセージ取得
-    std::optional<std::string> getRandomKillGGMessage(const std::string& targetName = "相手") const;
+    // getRandomKillGGMessage 削除済み
     std::optional<std::string> getRandomAutoGGMessage() const;
+    std::optional<std::string> getRandomTopKillerTauntMessage(const std::string& targetName = "やつ") const;
 
     // 設定の再読み込み
     void reloadConfig();
@@ -64,8 +68,9 @@ private:
     MessageConfig() = default;
 
     // 設定データ
-    KillGGConfig mKillGGConfig;
+    // mKillGGConfig 削除済み
     AutoGGConfig mAutoGGConfig;
+    TopKillerTauntConfig mTopKillerTauntConfig;
 
     // OriginModインスタンスの参照
     origin_mod::OriginMod* mMod{nullptr};

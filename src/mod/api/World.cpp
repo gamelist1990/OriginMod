@@ -17,22 +17,18 @@
 namespace origin_mod::api {
 
 // キルメッセージを検出するキーワード
-constexpr std::array<std::string_view, 15> kKillKeywords{
+constexpr std::array<std::string_view, 17> kKillKeywords{
     "を倒しました", "を倒した", "をキルしました", "をキルした", "をキル",
     "killed", "slain", "defeated", "eliminated",
     "をやっつけました", "を撃破", "を討伐", "died",
-    "§7をキルしました", "§7が §"
+    "§7をキルしました",
+    "との戦いを制しました", "を 抹殺しました", "を沈黙させました"
 };
 
 // ゲーム終了を検出するキーワード
-constexpr std::array<std::string_view, 26> kGameEndKeywords{
-    // 日本語パターン
-    "ゲーム終了", "試合終了", "勝利", "敗北", "勝ち", "負け", "優勝",
-    "ゲームオーバー", "GAME OVER", "Game Over",
-
-    // 英語パターン
-    "won the game", "has won the game", "You won", "You lost", "Victory",
-    "Defeat", "Winner", "Game End", "Match End", "Champions", "Champion",
+constexpr std::array<std::string_view, 6> kGameEndKeywords{
+    // 基本パターン
+    "ゲーム終了",
 
     // サーバー固有パターン
     "§a won the game!", "§a has won the game!", "§aYou Win!",

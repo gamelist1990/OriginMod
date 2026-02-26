@@ -58,14 +58,8 @@ void executeConfig(OriginMod& mod, const std::vector<std::string>& args) {
         player.localSendMessage(fmt::format("§7FeatureManager: {}",
             featureManager.isInitialized() ? "初期化済み" : "未初期化"));
 
-        const auto& killggConfig = messageConfig.getKillGGConfig();
+
         const auto& autoggConfig = messageConfig.getAutoGGConfig();
-
-        player.localSendMessage(fmt::format("§7KillGG: {} ({} messages, {}ms cooldown)",
-            killggConfig.enabled ? "有効" : "無効",
-            killggConfig.messages.size(),
-            killggConfig.cooldown));
-
         player.localSendMessage(fmt::format("§7AutoGG: {} ({} messages, {}-{}ms delay)",
             autoggConfig.enabled ? "有効" : "無効",
             autoggConfig.messages.size(),
@@ -77,15 +71,7 @@ void executeConfig(OriginMod& mod, const std::vector<std::string>& args) {
 
     } else if (args.size() >= 1 && args[0] == "test") {
         // 設定テスト
-        if (args.size() >= 2 && args[1] == "killgg") {
-            auto& messageConfig = origin_mod::config::MessageConfig::instance();
-            auto message = messageConfig.getRandomKillGGMessage("TestPlayer");
-            if (message.has_value()) {
-                player.localSendMessage(fmt::format("§eKillGG Test: {}", message.value()));
-            } else {
-                player.localSendMessage("§cKillGG: メッセージが取得できませんでした");
-            }
-        } else if (args.size() >= 2 && args[1] == "autogg") {
+        if (args.size() >= 2 && args[1] == "autogg") {
             auto& messageConfig = origin_mod::config::MessageConfig::instance();
             auto message = messageConfig.getRandomAutoGGMessage();
             if (message.has_value()) {
@@ -94,7 +80,7 @@ void executeConfig(OriginMod& mod, const std::vector<std::string>& args) {
                 player.localSendMessage("§cAutoGG: メッセージが取得できませんでした");
             }
         } else {
-            player.localSendMessage("§7使用法: /config test <killgg|autogg>");
+            player.localSendMessage("§7使用法: /config test <autogg>");
         }
 
     } else {
@@ -103,10 +89,10 @@ void executeConfig(OriginMod& mod, const std::vector<std::string>& args) {
         player.localSendMessage("§7使用法:");
         player.localSendMessage("§7  /config reload [file] - 設定ファイルをリロード");
         player.localSendMessage("§7  /config status - 設定システムの状態表示");
-        player.localSendMessage("§7  /config test <killgg|autogg> - メッセージのテスト");
+        player.localSendMessage("§7  /config test <autogg> - メッセージのテスト");
         player.localSendMessage("§7");
         player.localSendMessage("§7利用可能なファイル:");
-        player.localSendMessage("§7  messages.json - KillGG/AutoGGメッセージ設定");
+        player.localSendMessage("§7  messages.json - AutoGGメッセージ設定");
         player.localSendMessage("§7  features.json - 機能の有効/無効設定");
     }
 }

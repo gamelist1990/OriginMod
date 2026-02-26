@@ -27,8 +27,8 @@ void MessageConfig::initialize(origin_mod::OriginMod& mod) {
 
     mInitialized = true;
 
-    mod.getSelf().getLogger().info("MessageConfig initialized - KillGG: {} messages, AutoGG: {} messages",
-        mKillGGConfig.messages.size(), mAutoGGConfig.messages.size());
+    mod.getSelf().getLogger().info("MessageConfig initialized - AutoGG: {} messages, TopKillerTaunt: {} messages",
+        mAutoGGConfig.messages.size(), mTopKillerTauntConfig.messages.size());
 }
 
 void MessageConfig::shutdown() {
@@ -38,26 +38,7 @@ void MessageConfig::shutdown() {
     mInitialized = false;
 }
 
-std::optional<std::string> MessageConfig::getRandomKillGGMessage(const std::string& targetName) const {
-    if (!mInitialized || !mKillGGConfig.enabled || mKillGGConfig.messages.empty()) {
-        return std::nullopt;
-    }
-
-    // ランダムなテンプレートを選択
-    std::uniform_int_distribution<size_t> dist(0, mKillGGConfig.messages.size() - 1);
-    const auto& templateStr = mKillGGConfig.messages[dist(mRng)];
-
-    try {
-        // {} を targetName で置換
-        auto message = fmt::format(fmt::runtime(templateStr), targetName);
-        return message;
-    } catch (const std::exception& e) {
-        if (mMod) {
-            mMod->getSelf().getLogger().warn("Failed to format KillGG message '{}': {}", templateStr, e.what());
-        }
-        return templateStr; // フォーマットに失敗した場合は元の文字列を返す
-    }
-}
+// getRandomKillGGMessage 削除済み
 
 std::optional<std::string> MessageConfig::getRandomAutoGGMessage() const {
     if (!mInitialized || !mAutoGGConfig.enabled || mAutoGGConfig.messages.empty()) {
@@ -67,6 +48,27 @@ std::optional<std::string> MessageConfig::getRandomAutoGGMessage() const {
     // ランダムなメッセージを選択
     std::uniform_int_distribution<size_t> dist(0, mAutoGGConfig.messages.size() - 1);
     return mAutoGGConfig.messages[dist(mRng)];
+}
+
+std::optional<std::string> MessageConfig::getRandomTopKillerTauntMessage(const std::string& targetName) const {
+    if (!mInitialized || !mTopKillerTauntConfig.enabled || mTopKillerTauntConfig.messages.empty()) {
+        return std::nullopt;
+    }
+
+    // ランダムなテンプレートを選択
+    std::uniform_int_distribution<size_t> dist(0, mTopKillerTauntConfig.messages.size() - 1);
+    const auto& templateStr = mTopKillerTauntConfig.messages[dist(mRng)];
+
+    try {
+        // {} を targetName で置換
+        auto message = fmt::format(fmt::runtime(templateStr), targetName);
+        return message;
+    } catch (const std::exception& e) {
+        if (mMod) {
+            mMod->getSelf().getLogger().warn("Failed to format TopKillerTaunt message '{}': {}", templateStr, e.what());
+        }
+        return templateStr; // フォーマットに失敗した場合は元の文字列を返す
+    }
 }
 
 void MessageConfig::reloadConfig() {
@@ -90,14 +92,16 @@ void MessageConfig::saveConfig() {
     auto& configManager = ConfigManager::instance();
 
     json data;
-    data["killgg"]["enabled"] = mKillGGConfig.enabled;
-    data["killgg"]["messages"] = mKillGGConfig.messages;
-    data["killgg"]["cooldown"] = mKillGGConfig.cooldown;
+    // KillGG保存処理削除
 
     data["autogg"]["enabled"] = mAutoGGConfig.enabled;
     data["autogg"]["messages"] = mAutoGGConfig.messages;
     data["autogg"]["minDelay"] = mAutoGGConfig.minDelay;
     data["autogg"]["maxDelay"] = mAutoGGConfig.maxDelay;
+
+    data["topkillertaunt"]["enabled"] = mTopKillerTauntConfig.enabled;
+    data["topkillertaunt"]["messages"] = mTopKillerTauntConfig.messages;
+    data["topkillertaunt"]["cooldown"] = mTopKillerTauntConfig.cooldown;
 
     configManager.saveConfig("messages.json", data);
 }
@@ -116,27 +120,7 @@ void MessageConfig::loadFromConfigManager() {
     const auto& data = config.value();
 
     try {
-        // KillGG設定
-        if (data.contains("killgg")) {
-            const auto& killgg = data["killgg"];
-
-            if (killgg.contains("enabled") && killgg["enabled"].is_boolean()) {
-                mKillGGConfig.enabled = killgg["enabled"];
-            }
-
-            if (killgg.contains("messages") && killgg["messages"].is_array()) {
-                mKillGGConfig.messages.clear();
-                for (const auto& msg : killgg["messages"]) {
-                    if (msg.is_string()) {
-                        mKillGGConfig.messages.push_back(msg);
-                    }
-                }
-            }
-
-            if (killgg.contains("cooldown") && killgg["cooldown"].is_number()) {
-                mKillGGConfig.cooldown = killgg["cooldown"];
-            }
-        }
+        // KillGG設定削除済み
 
         // AutoGG設定
         if (data.contains("autogg")) {
@@ -164,6 +148,28 @@ void MessageConfig::loadFromConfigManager() {
             }
         }
 
+        // TopKillerTaunt設定
+        if (data.contains("topkillertaunt")) {
+            const auto& taunt = data["topkillertaunt"];
+
+            if (taunt.contains("enabled") && taunt["enabled"].is_boolean()) {
+                mTopKillerTauntConfig.enabled = taunt["enabled"];
+            }
+
+            if (taunt.contains("messages") && taunt["messages"].is_array()) {
+                mTopKillerTauntConfig.messages.clear();
+                for (const auto& msg : taunt["messages"]) {
+                    if (msg.is_string()) {
+                        mTopKillerTauntConfig.messages.push_back(msg);
+                    }
+                }
+            }
+
+            if (taunt.contains("cooldown") && taunt["cooldown"].is_number()) {
+                mTopKillerTauntConfig.cooldown = taunt["cooldown"];
+            }
+        }
+
     } catch (const std::exception& e) {
         if (mMod) {
             mMod->getSelf().getLogger().error("Failed to parse message config: {}", e.what());
@@ -180,31 +186,7 @@ void MessageConfig::ensureDefaultConfig() {
 json MessageConfig::createDefaultConfig() const {
     json config;
 
-    // KillGGデフォルトメッセージ（既存のものから取得）
-    config["killgg"]["enabled"] = true;
-    config["killgg"]["cooldown"] = 800;
-    config["killgg"]["messages"] = json::array({
-        "{}さんお疲れ～GG",
-        "{}さんナイスファイト！GG",
-        "{}さん乙！GG",
-        "{}さんGG～",
-        "{}さんおつでした！",
-        "{}さんありがと～GG",
-        "{}さんお疲れ様！GG",
-        "{}さんGood Game!",
-        "{}さんGGWP!",
-        "{}さんドンマイ！GG",
-        "{}さんお見事！GG",
-        "{}さん対戦ありがとうございました！",
-        "{}さんまたよろしく～GG",
-        "{}さんおつGG",
-        "{}さんファイト！GG",
-        "{}さんお疲れっした！GG",
-        "{}さん(｀・ω・´)b GG",
-        "{}さんいい勝負だった！GG",
-        "{}さんおつかれ～",
-        "{}さんGG ありがとう！"
-    });
+    // KillGGデフォルト削除済み
 
     // AutoGGデフォルトメッセージ（既存のものから取得）
     config["autogg"]["enabled"] = true;
@@ -231,6 +213,27 @@ json MessageConfig::createDefaultConfig() const {
         "また遊びましょう！",
         "Great game everyone!",
         "Thanks for the game!"
+    });
+
+    // TopKillerTauntデフォルトメッセージ
+    config["topkillertaunt"]["enabled"] = true;
+    config["topkillertaunt"]["cooldown"] = 3000;
+    config["topkillertaunt"]["messages"] = json::array({
+        "{}を倒せ～～！",
+        "{}に負けるな！",
+        "{}、調子に乗ってるぞ！",
+        "{}を止めろ！",
+        "{}強すぎ！でも負けない！",
+        "{}、覚えてろよ！",
+        "{}に復讐だ！",
+        "{}め、今度こそ倒す！",
+        "{}、待ってろよ！",
+        "{}には負けられない！",
+        "{}を狙え！",
+        "{}、次はこっちの番だ！",
+        "{}、いい気になるなよ！",
+        "{}を打倒せよ！",
+        "{}、勝負だ！"
     });
 
     return config;
